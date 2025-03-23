@@ -25,8 +25,8 @@ const pool = require('./config/db.js'); // PostgreSQL connection
 
 
 // // Routes
-// const exampleRoutes = require('./routes/example.js');
-// app.use('/api/example', exampleRoutes);
+const exampleRoutes = require('./routes/example.route.js');
+app.use('/api/example', exampleRoutes);
 
 const setupSwagger = require('./config/swagger.js');
 setupSwagger(app);
