@@ -6,7 +6,7 @@ const {
 
 /**
  * @swagger
- * /:
+ * /api/example/:
  *   get:
  *     summary: Example route
  *     description: Returns a response from the test controller.

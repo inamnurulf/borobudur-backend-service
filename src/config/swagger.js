@@ -11,10 +11,10 @@ const swaggerOptions = {
     },
     servers: [
       {
-        url: "http://localhost:3000",
-        description: "Local server",
+        url: process.env.SWAGGER_SERVER_URL || "http://localhost:3000",
+        description: "Dynamic server",
       },
-    ],
+    ],    
   },
   apis: ["./src/routes/*.js"], // Automatically scan all route files
 };
