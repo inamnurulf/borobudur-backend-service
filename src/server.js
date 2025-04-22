@@ -3,7 +3,6 @@ const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
 const morgan = require('morgan');
-const swaggerUi = require('swagger-ui-express');
 const dotenv = require('dotenv');
 
 // Load environment variables
@@ -33,9 +32,6 @@ app.use("/v1", v1Routes)
 const setupSwagger = require('./config/swagger.js');
 setupSwagger(app);
 
-// Error handling middleware
-const errorHandler = require('./midlewares/error.js');
-app.use(errorHandler);
 
 // Start server
 app.listen(port, () => {
