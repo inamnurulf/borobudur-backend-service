@@ -16,7 +16,7 @@ const swaggerOptions = {
       },
     ],    
   },
-  apis: ["./src/routes/*.js"], // Automatically scan all route files
+  apis: ["./src/routes/**/*.js"]
 };
 
 const swaggerDocs = swaggerJsDoc(swaggerOptions);
