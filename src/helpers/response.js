@@ -41,7 +41,7 @@ exports.failedResponse = async ({ res, req = null, errors = null }) => {
   }
 
   return res.status(code).json({
-    status: "error",
+    status: "failed",
     message,
     errors: errors?.errors || (errors instanceof Error ? { message: errors.message } : errors),
     code,

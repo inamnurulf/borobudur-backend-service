@@ -19,6 +19,19 @@ class UserRepository {
     );
     return res.rows[0];
   }
+
+  async activateAccount(email) {
+    const res = await pool.query(
+      `UPDATE users
+       SET is_active = TRUE,
+           verification_code = NULL
+       WHERE email = $1
+       RETURNING id, name, email, role, is_active`,
+      [email]
+    );
+    return res.rows[0];
+  }
+  
 }
 
 module.exports = new UserRepository();

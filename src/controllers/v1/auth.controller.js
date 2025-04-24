@@ -78,11 +78,28 @@ const forgotPassword = async ({ email }) => {
   return { message: "Verification code sent to email" };
 };
 
-const verifyCode = async ({ email, code }) => {
-  console.log("Verifying code:", { email, code });
+const verifyCode = async (req) => {
+  const { email, code } = req.body;
+  const normalizedEmail = email.toLowerCase();
 
-  return { message: "Code verified successfully" };
+  const user = await userRepository.findByEmail(normalizedEmail);
+  if (!user) {
+    throw new CustomError({ message: "User not found", statusCode: 404 });
+  }
+
+  if (user.is_active) {
+    return { message: "User is already verified." };
+  }
+
+  if (user.verification_code !== code) {
+    throw new CustomError({ message: "Invalid verification code", statusCode: 400 });
+  }
+
+  await userRepository.activateAccount(normalizedEmail);
+
+  return { message: "Email verified successfully. Account activated." };
 };
+
 
 const resetPassword = async ({ email, code, newPassword }) => {
   console.log("Resetting password for:", email, "with code:", code);

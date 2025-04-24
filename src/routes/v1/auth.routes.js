@@ -237,7 +237,7 @@ router.get("/me", async (req, res) => {
  */
 router.post(
   "/forgot-password",
-  validate("forgotPassword"),
+  validate("forgot-password"),
   async (req, res) => {
     try {
       const errors = validationResult(req);
@@ -282,7 +282,7 @@ router.post(
  *       200:
  *         description: Code verified successfully
  */
-router.post("/verify-code", validate("verifyCode"), async (req, res) => {
+router.post("/verify-code", validate("verify-code"), async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty())  
@@ -291,7 +291,7 @@ router.post("/verify-code", validate("verifyCode"), async (req, res) => {
         statusCode: 400,
         errors: errors.array() 
       });
-        const result = await authController.verifyCode(req, res);
+        const result = await authController.verifyCode(req);
     res
       .status(201)
       .json(successResponse({ message: result.message, data: result.user }));
@@ -328,7 +328,7 @@ router.post("/verify-code", validate("verifyCode"), async (req, res) => {
  *       200:
  *         description: Password has been reset
  */
-router.post("/reset-password", validate("resetPassword"), async (req, res) => {
+router.post("/reset-password", validate("reset-password"), async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty())  
