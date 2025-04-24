@@ -136,7 +136,7 @@ router.post("/refresh-token", validate("refreshToken"), async (req, res) => {
         const result = await authController.refreshToken(req, res);
     res
       .status(201)
-      .json(successResponse({ message: result.message, data: result.user }));
+      .json(successResponse({ message: "Token refreshed", data: result }));
   } catch (err) {
     logger.error("Error in refreshToken:", err); 
     await failedResponse({ res, req, errors: err });

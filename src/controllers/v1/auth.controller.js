@@ -85,13 +85,44 @@ const login = async (req, res) => {
   };
 };
 
-const refreshToken = async ({ refreshToken }) => {
-  console.log("Refreshing token:", refreshToken);
+const refreshToken = async (req, res) => {
+  const { refreshToken } = req.body;
+  const payload = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+  const userId = payload.id;
 
-  // Return new dummy tokens
+  const storedToken = await userRepository.findByRefreshToken(refreshToken);
+  if (
+    !storedToken ||
+    storedToken.is_revoked ||
+    storedToken.expires_at < new Date()
+  ) {
+    throw new CustomError({
+      message: "Invalid or expired refresh token",
+      statusCode: 403,
+    });
+  }
+
+  await userRepository.revokeRefreshToken(storedToken.id);
+
+  const newAccessToken = jwt.sign({ id: userId }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRATION,
+  });
+  const newRefreshToken = jwt.sign(
+    { id: userId },
+    process.env.JWT_REFRESH_SECRET,
+    { expiresIn: process.env.JWT_REFRESH_EXPIRATION }
+  );
+
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+  await userRepository.saveRefreshToken({
+    userId,
+    refreshToken: newRefreshToken,
+    expiresAt,
+  });
+
   return {
-    accessToken: "newDummyAccessToken",
-    refreshToken: "newDummyRefreshToken",
+    accessToken: newAccessToken,
+    refreshToken: newRefreshToken,
   };
 };
 
