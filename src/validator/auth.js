@@ -4,44 +4,83 @@ exports.validate = (method) => {
   switch (method) {
     case "register": {
       return [
-        body("name", "Name is required").exists().isString().trim(),
-        body("email", "Valid email is required").exists().isEmail(),
-        body("password", "Password must be at least 8 characters").exists().isLength({ min: 8 }),
+        body("name")
+          .exists().withMessage("Name is required")
+          .bail()
+          .isString().withMessage("Name must be a string")
+          .trim(),
+
+        body("email")
+          .exists().withMessage("Email is required")
+          .bail()
+          .isEmail().withMessage("Email must be valid"),
+
+        body("password")
+          .exists().withMessage("Password is required")
+          .bail()
+          .isLength({ min: 8 }).withMessage("Password must be at least 8 characters"),
       ];
     }
 
     case "login": {
       return [
-        body("email", "Valid email is required").exists().isEmail(),
-        body("password", "Password is required").exists()
+        body("email")
+          .exists().withMessage("Email is required")
+          .bail()
+          .isEmail().withMessage("Email must be valid"),
+
+        body("password")
+          .exists().withMessage("Password is required")
       ];
     }
 
     case "refresh-token":
     case "logout": {
       return [
-        body("refreshToken", "refreshToken is required").exists(),
+        body("refreshToken")
+          .exists().withMessage("Refresh token is required"),
       ];
     }
 
     case "forgot-password": {
       return [
-        body("email", "Valid email is required").exists().isEmail(),
+        body("email")
+          .exists().withMessage("Email is required")
+          .bail()
+          .isEmail().withMessage("Email must be valid"),
       ];
     }
 
     case "verify-code": {
       return [
-        body("email", "Valid email is required").exists().isEmail(),
-        body("code", "6-digit code is required").exists().isLength({ min: 6, max: 6 }),
+        body("email")
+          .exists().withMessage("Email is required")
+          .bail()
+          .isEmail().withMessage("Email must be valid"),
+
+        body("code")
+          .exists().withMessage("Code is required")
+          .bail()
+          .isLength({ min: 6, max: 6 }).withMessage("Code must be 6 digits"),
       ];
     }
 
     case "reset-password": {
       return [
-        body("email", "Valid email is required").exists().isEmail(),
-        body("code", "6-digit code is required").exists().isLength({ min: 6, max: 6 }),
-        body("newPassword", "Password must be at least 8 characters").exists().isLength({ min: 8 }),
+        body("email")
+          .exists().withMessage("Email is required")
+          .bail()
+          .isEmail().withMessage("Email must be valid"),
+
+        body("code")
+          .exists().withMessage("Code is required")
+          .bail()
+          .isLength({ min: 6, max: 6 }).withMessage("Code must be 6 digits"),
+
+        body("newPassword")
+          .exists().withMessage("New password is required")
+          .bail()
+          .isLength({ min: 8 }).withMessage("New password must be at least 8 characters"),
       ];
     }
 
