@@ -9,8 +9,10 @@ exports.successResponse = ({ message = "Success", data = null, code = 200 }) => 
   };
 };
 
-exports.failedResponse = async ({ message = "Something went wrong", errors = null, code = 400, req = null }) => {
-  // Log 500 errors to the database
+exports.failedResponse = async ({ res, req = null, errors = null }) => {
+  const code = errors?.statusCode || 500;
+  const message = errors?.message || errors?.toString() || "Something went wrong";
+
   if (code === 500 && req) {
     try {
       const query = `
@@ -23,7 +25,6 @@ exports.failedResponse = async ({ message = "Something went wrong", errors = nul
           created_at
         ) VALUES ($1, $2, $3, $4, $5, $6)
       `;
-
       const values = [
         message,
         errors?.stack || "No stack trace available",
@@ -32,7 +33,6 @@ exports.failedResponse = async ({ message = "Something went wrong", errors = nul
         JSON.stringify(req.body),
         new Date(),
       ];
-
       await pool.query(query, values);
       console.log("✅ Error logged to database");
     } catch (dbError) {
@@ -40,10 +40,10 @@ exports.failedResponse = async ({ message = "Something went wrong", errors = nul
     }
   }
 
-  return {
+  return res.status(code).json({
     status: "error",
     message,
-    errors,
+    errors: errors?.errors || (errors instanceof Error ? { message: errors.message } : errors),
     code,
-  };
+  });
 };
