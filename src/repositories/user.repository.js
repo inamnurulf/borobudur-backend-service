@@ -45,6 +45,34 @@ class UserRepository {
     const res = await pool.query(query);
     return res.rows[0];
   }
+
+  async findByRefreshToken(refreshToken) {
+    const query = {
+      text: `
+        SELECT * FROM tokens
+        WHERE refresh_token = $1
+          AND is_revoked = FALSE
+          AND expires_at > NOW()
+      `,
+      values: [refreshToken],
+    };
+  
+    const res = await pool.query(query);
+    return res.rows[0];
+  } 
+
+  async revokeRefreshToken(tokenId) {
+    const query = {
+      text: `
+        UPDATE tokens
+        SET is_revoked = TRUE
+        WHERE id = $1
+      `,
+      values: [tokenId],
+    };
+  
+    await pool.query(query);
+  }
   
 }
 

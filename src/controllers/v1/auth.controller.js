@@ -95,8 +95,19 @@ const refreshToken = async ({ refreshToken }) => {
   };
 };
 
-const logout = async ({ refreshToken }) => {
-  console.log("Logging out, token:", refreshToken);
+const logout = async (req, res) => {
+  const { refreshToken } = req.body;
+  const token = await userRepository.findByRefreshToken(refreshToken);
+
+  if (!token) {
+    throw new CustomError({
+      message: "Already logged out or token not found",
+      statusCode: 404,
+    });
+  }
+  if (token) {
+    await userRepository.revokeRefreshToken(token.id);
+  }
 
   return { message: "Logged out successfully" };
 };

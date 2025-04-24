@@ -20,7 +20,7 @@ exports.validate = (method) => {
     case "refresh-token":
     case "logout": {
       return [
-        body("refreshToken", "refreshToken is required").exists().isString(),
+        body("refreshToken", "refreshToken is required").exists(),
       ];
     }
 

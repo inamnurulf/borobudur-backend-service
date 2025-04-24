@@ -176,7 +176,7 @@ router.post("/logout", validate("logout"), async (req, res) => {
         const result = await authController.logout(req, res);
     res
       .status(201)
-      .json(successResponse({ message: result.message, data: result.user }));
+      .json(successResponse({ message: result.message }));
   } catch (err) {
     logger.error("Error in logout:", err); 
     await failedResponse({ res, req, errors: err });
