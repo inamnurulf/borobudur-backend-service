@@ -6,6 +6,7 @@ const { validationResult } = require("express-validator");
 const { successResponse, failedResponse } = require("../../helpers/response");
 const logger = require("../../config/logger");
 const CustomError = require("../../helpers/customError");
+const authenticate = require("../../middlewares/auth.middleware");
 
 /**
  * @swagger
@@ -193,7 +194,7 @@ router.post("/logout", validate("logout"), async (req, res) => {
  *       200:
  *         description: Current user data
  */
-router.get("/me", async (req, res) => {
+router.get("/me", authenticate, async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty())

@@ -143,14 +143,21 @@ const logout = async (req, res) => {
   return { message: "Logged out successfully" };
 };
 
-const getCurrentUser = async (user) => {
-  // Assume user object is injected after JWT verification
+const getCurrentUser = async (req,res) => {
+  const user = req.user;
+  const existingUser = await userRepository.findByEmail(user.email);
+
+  if (!existingUser) {
+    throw new CustomError({ message: "User not found", statusCode: 404 });
+  }
+
   return {
     user: {
-      id: "user_123",
-      name: "John Doe",
-      email: "john@example.com",
-      role: "user",
+      id: existingUser.id,
+      name: existingUser.name,
+      email: existingUser.email,
+      role: existingUser.role || "user",
+      isActive: existingUser.is_active,
     },
   };
 };
