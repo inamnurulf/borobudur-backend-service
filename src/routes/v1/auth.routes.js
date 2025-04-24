@@ -96,7 +96,7 @@ router.post("/login", validate("login"), async (req, res) => {
         const result = await authController.login(req, res);
     res
       .status(201)
-      .json(successResponse({ message: result.message, data: result.user }));
+      .json(successResponse({ message: "Login Success", data: result }));
   } catch (err) {
     logger.error("Error in login:", err); 
     await failedResponse({ res, req, errors: err });

@@ -13,7 +13,7 @@ exports.validate = (method) => {
     case "login": {
       return [
         body("email", "Valid email is required").exists().isEmail(),
-        body("password", "Password is required").exists().isString(),
+        body("password", "Password is required").exists()
       ];
     }
 

@@ -1,10 +1,10 @@
 const userRepository = require("../../repositories/user.repository");
 const emailService = require("../../config/nodemailer");
-const { failedResponse } = require("../../helpers/response");
 const bcrypt = require("bcrypt");
 const {
   generateVerificationCode,
 } = require("../../helpers/generateVerificationCode");
+const jwt = require("jsonwebtoken");
 const CustomError = require("../../helpers/customError");
 
 const register = async (req, res) => {
@@ -16,13 +16,13 @@ const register = async (req, res) => {
     throw new CustomError({ message: "User already exists", statusCode: 400 });
 
   const passwordHash = await bcrypt.hash(password, 10);
-  const verificationCode = generateVerificationCode(); 
+  const verificationCode = generateVerificationCode();
 
   const user = await userRepository.create({
     name,
     email: normalizedEmail,
     passwordHash,
-    verificationCode, 
+    verificationCode,
   });
 
   await emailService.sendRegisterMail({
@@ -34,13 +34,54 @@ const register = async (req, res) => {
   return { message: "User registered. Please verify your email.", user };
 };
 
-const login = async ({ email, password }) => {
-  console.log("Logging in:", { email, password });
+const login = async (req, res) => {
+  const { email, password } = req.body;
 
-  // Dummy tokens
+  const normalizedEmail = email.toLowerCase();
+  const user = await userRepository.findByEmail(normalizedEmail);
+
+  if (!user) {
+    throw new CustomError({ message: "User not found", statusCode: 404 });
+  }
+
+  const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+  if (!isPasswordValid) {
+    throw new CustomError({
+      message: "Invalid email or password",
+      statusCode: 401,
+    });
+  }
+
+  if (!user.is_active) {
+    throw new CustomError({ message: "Email not verified", statusCode: 403 });
+  }
+
+  const payload = {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role || "user",
+  };
+
+  const accessToken = jwt.sign(payload, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRATION,
+  });
+
+  const refreshToken = jwt.sign(payload, process.env.JWT_REFRESH_SECRET, {
+    expiresIn: process.env.JWT_REFRESH_EXPIRATION,
+  });
+
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+  await userRepository.saveRefreshToken({
+    userId: user.id,
+    refreshToken,
+    expiresAt,
+  });
+
   return {
-    accessToken: "dummyAccessToken",
-    refreshToken: "dummyRefreshToken",
+    accessToken,
+    refreshToken,
   };
 };
 
@@ -92,14 +133,16 @@ const verifyCode = async (req) => {
   }
 
   if (user.verification_code !== code) {
-    throw new CustomError({ message: "Invalid verification code", statusCode: 400 });
+    throw new CustomError({
+      message: "Invalid verification code",
+      statusCode: 400,
+    });
   }
 
   await userRepository.activateAccount(normalizedEmail);
 
   return { message: "Email verified successfully. Account activated." };
 };
-
 
 const resetPassword = async ({ email, code, newPassword }) => {
   console.log("Resetting password for:", email, "with code:", code);

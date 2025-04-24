@@ -32,6 +32,20 @@ class UserRepository {
     return res.rows[0];
   }
   
+  async saveRefreshToken({ userId, refreshToken, expiresAt }) {
+    const query = {
+      text: `
+        INSERT INTO tokens (user_id, refresh_token, expires_at)
+        VALUES ($1, $2, $3)
+        RETURNING id, user_id, refresh_token, created_at, expires_at, is_revoked
+      `,
+      values: [userId, refreshToken, expiresAt],
+    };
+  
+    const res = await pool.query(query);
+    return res.rows[0];
+  }
+  
 }
 
 module.exports = new UserRepository();
