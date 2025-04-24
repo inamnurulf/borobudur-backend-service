@@ -44,18 +44,18 @@ const CustomError = require("../../helpers/customError");
 router.post("/register", validate("register"), async (req, res) => {
   try {
     const errors = validationResult(req);
-    if (!errors.isEmpty())  
-      throw new CustomError({ 
-        message: "Validation failed", 
+    if (!errors.isEmpty())
+      throw new CustomError({
+        message: "Validation failed",
         statusCode: 400,
-        errors: errors.array() 
+        errors: errors.array(),
       });
-        const result = await authController.register(req, res);
+    const result = await authController.register(req, res);
     res
       .status(201)
       .json(successResponse({ message: result.message, data: result.user }));
   } catch (err) {
-    logger.error("Error in register:", err); 
+    logger.error("Error in register:", err);
     await failedResponse({ res, req, errors: err });
   }
 });
@@ -87,18 +87,18 @@ router.post("/register", validate("register"), async (req, res) => {
 router.post("/login", validate("login"), async (req, res) => {
   try {
     const errors = validationResult(req);
-    if (!errors.isEmpty())  
-      throw new CustomError({ 
-        message: "Validation failed", 
+    if (!errors.isEmpty())
+      throw new CustomError({
+        message: "Validation failed",
         statusCode: 400,
-        errors: errors.array() 
+        errors: errors.array(),
       });
-        const result = await authController.login(req, res);
+    const result = await authController.login(req, res);
     res
       .status(201)
       .json(successResponse({ message: "Login Success", data: result }));
   } catch (err) {
-    logger.error("Error in login:", err); 
+    logger.error("Error in login:", err);
     await failedResponse({ res, req, errors: err });
   }
 });
@@ -127,18 +127,18 @@ router.post("/login", validate("login"), async (req, res) => {
 router.post("/refresh-token", validate("refreshToken"), async (req, res) => {
   try {
     const errors = validationResult(req);
-    if (!errors.isEmpty())  
-      throw new CustomError({ 
-        message: "Validation failed", 
+    if (!errors.isEmpty())
+      throw new CustomError({
+        message: "Validation failed",
         statusCode: 400,
-        errors: errors.array() 
+        errors: errors.array(),
       });
-        const result = await authController.refreshToken(req, res);
+    const result = await authController.refreshToken(req, res);
     res
       .status(201)
       .json(successResponse({ message: "Token refreshed", data: result }));
   } catch (err) {
-    logger.error("Error in refreshToken:", err); 
+    logger.error("Error in refreshToken:", err);
     await failedResponse({ res, req, errors: err });
   }
 });
@@ -167,18 +167,16 @@ router.post("/refresh-token", validate("refreshToken"), async (req, res) => {
 router.post("/logout", validate("logout"), async (req, res) => {
   try {
     const errors = validationResult(req);
-    if (!errors.isEmpty())  
-      throw new CustomError({ 
-        message: "Validation failed", 
+    if (!errors.isEmpty())
+      throw new CustomError({
+        message: "Validation failed",
         statusCode: 400,
-        errors: errors.array() 
+        errors: errors.array(),
       });
-        const result = await authController.logout(req, res);
-    res
-      .status(201)
-      .json(successResponse({ message: result.message }));
+    const result = await authController.logout(req, res);
+    res.status(201).json(successResponse({ message: result.message }));
   } catch (err) {
-    logger.error("Error in logout:", err); 
+    logger.error("Error in logout:", err);
     await failedResponse({ res, req, errors: err });
   }
 });
@@ -198,18 +196,18 @@ router.post("/logout", validate("logout"), async (req, res) => {
 router.get("/me", async (req, res) => {
   try {
     const errors = validationResult(req);
-    if (!errors.isEmpty())  
-      throw new CustomError({ 
-        message: "Validation failed", 
+    if (!errors.isEmpty())
+      throw new CustomError({
+        message: "Validation failed",
         statusCode: 400,
-        errors: errors.array() 
+        errors: errors.array(),
       });
-        const result = await authController.getCurrentUser(req, res);
+    const result = await authController.getCurrentUser(req, res);
     res
       .status(201)
       .json(successResponse({ message: result.message, data: result.user }));
   } catch (err) {
-    logger.error("Error in getCurrentUser:", err); 
+    logger.error("Error in getCurrentUser:", err);
     await failedResponse({ res, req, errors: err });
   }
 });
@@ -241,18 +239,16 @@ router.post(
   async (req, res) => {
     try {
       const errors = validationResult(req);
-      if (!errors.isEmpty())  
-        throw new CustomError({ 
-          message: "Validation failed", 
+      if (!errors.isEmpty())
+        throw new CustomError({
+          message: "Validation failed",
           statusCode: 400,
-          errors: errors.array() 
+          errors: errors.array(),
         });
-          const result = await authController.forgotPassword(req, res);
-      res
-        .status(201)
-        .json(successResponse({ message: result.message, data: result.user }));
+      const result = await authController.forgotPassword(req, res);
+      res.status(201).json(successResponse({ message: result.message }));
     } catch (err) {
-      logger.error("Error in forgotPassword:", err); 
+      logger.error("Error in forgotPassword:", err);
       await failedResponse({ res, req, errors: err });
     }
   }
@@ -285,18 +281,18 @@ router.post(
 router.post("/verify-code", validate("verify-code"), async (req, res) => {
   try {
     const errors = validationResult(req);
-    if (!errors.isEmpty())  
-      throw new CustomError({ 
-        message: "Validation failed", 
+    if (!errors.isEmpty())
+      throw new CustomError({
+        message: "Validation failed",
         statusCode: 400,
-        errors: errors.array() 
+        errors: errors.array(),
       });
-        const result = await authController.verifyCode(req);
+    const result = await authController.verifyCode(req);
     res
       .status(201)
       .json(successResponse({ message: result.message, data: result.user }));
   } catch (err) {
-    logger.error("Error in verifyCode:", err); 
+    logger.error("Error in verifyCode:", err);
     await failedResponse({ res, req, errors: err });
   }
 });
@@ -331,18 +327,18 @@ router.post("/verify-code", validate("verify-code"), async (req, res) => {
 router.post("/reset-password", validate("reset-password"), async (req, res) => {
   try {
     const errors = validationResult(req);
-    if (!errors.isEmpty())  
-      throw new CustomError({ 
-        message: "Validation failed", 
+    if (!errors.isEmpty())
+      throw new CustomError({
+        message: "Validation failed",
         statusCode: 400,
-        errors: errors.array() 
+        errors: errors.array(),
       });
-        const result = await authController.resetPassword(req, res);
+    const result = await authController.resetPassword(req, res);
     res
       .status(201)
       .json(successResponse({ message: result.message, data: result.user }));
   } catch (err) {
-    logger.error("Error in resetPassword:", err); 
+    logger.error("Error in resetPassword:", err);
     await failedResponse({ res, req, errors: err });
   }
 });

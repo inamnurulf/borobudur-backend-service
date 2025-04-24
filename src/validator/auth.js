@@ -40,7 +40,7 @@ exports.validate = (method) => {
     case "reset-password": {
       return [
         body("email", "Valid email is required").exists().isEmail(),
-        body("code", "6-digit code is required").exists().isLength({ min: 6, max: 6 }).isNumeric(),
+        body("code", "6-digit code is required").exists().isLength({ min: 6, max: 6 }),
         body("newPassword", "Password must be at least 8 characters").exists().isLength({ min: 8 }),
       ];
     }

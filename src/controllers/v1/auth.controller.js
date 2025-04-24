@@ -155,8 +155,24 @@ const getCurrentUser = async (user) => {
   };
 };
 
-const forgotPassword = async ({ email }) => {
-  console.log("Sending verification code to:", email);
+const forgotPassword = async (req) => {
+  const { email } = req.body;
+  const normalizedEmail = email.toLowerCase();
+  const user = await userRepository.findByEmail(normalizedEmail);
+
+  if (!user) {
+    throw new CustomError({ message: "User not found", statusCode: 404 });
+  }
+
+  const verificationCode = generateVerificationCode();
+
+  await userRepository.updateVerificationCode(normalizedEmail, verificationCode);
+
+  await emailService.sendResetPasswordMail({
+    to: normalizedEmail,
+    name: user.name,
+    code: verificationCode,
+  });
 
   return { message: "Verification code sent to email" };
 };
@@ -186,11 +202,32 @@ const verifyCode = async (req) => {
   return { message: "Email verified successfully. Account activated." };
 };
 
-const resetPassword = async ({ email, code, newPassword }) => {
-  console.log("Resetting password for:", email, "with code:", code);
+const resetPassword = async (req, res) => {
+  const { email, code, newPassword } = req.body;
+  const normalizedEmail = email.toLowerCase();
+  const user = await userRepository.findByEmail(normalizedEmail);
+
+  if (!user) {
+    throw new CustomError({ message: "User not found", statusCode: 404 });
+  }
+
+  if (user.verification_code !== code) {
+    throw new CustomError({
+      message: "Invalid verification code",
+      statusCode: 400,
+    });
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, 10);
+
+  await userRepository.updatePassword(normalizedEmail, passwordHash);
+
+  // Optional: revoke all refresh tokens
+  await userRepository.revokeAllRefreshTokens(user.id);
 
   return { message: "Password has been reset successfully" };
 };
+
 
 module.exports = {
   register,

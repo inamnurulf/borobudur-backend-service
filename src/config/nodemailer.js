@@ -29,7 +29,7 @@ class EmailService {
    */
   async sendRegisterMail({ to, name, code }) {
     const mailOptions = {
-      from: `"Your App Name" <${process.env.GMAIL_USER}>`,
+      from: `"Borobudur" <${process.env.GMAIL_USER}>`,
       to,
       subject: "Verify Your Email Address",
       html: `
@@ -52,6 +52,28 @@ class EmailService {
     }
   }
   
+  async sendResetPasswordMail({ to, name, code }) {
+    const mailOptions = {
+      from: `"Borobudur" <${process.env.GMAIL_USER}>`,
+      to,
+      subject: "Reset Your Password",
+      html: `
+        <h2>Hello, ${name}</h2>
+        <p>You requested a password reset. Use the code below:</p>
+        <h1 style="letter-spacing: 4px;">${code}</h1>
+        <p>This code will expire in 10 minutes. If you did not request this, please ignore it.</p>
+      `,
+    };
+
+    try {
+      const info = await this.transporter.sendMail(mailOptions);
+      logger.info("Reset password code sent:", info.messageId);
+      return info;
+    } catch (error) {
+      logger.error("Failed to send password reset email:", error);
+      throw error;
+    }
+  }
 }
 
 module.exports = new EmailService();

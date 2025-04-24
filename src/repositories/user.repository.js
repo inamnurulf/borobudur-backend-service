@@ -73,7 +73,42 @@ class UserRepository {
   
     await pool.query(query);
   }
+  async revokeAllRefreshTokens(userId) {
+    const query = {
+      text: `
+        UPDATE tokens
+        SET is_revoked = TRUE
+        WHERE user_id = $1`,
+      values: [userId],
+    };
   
+    await pool.query(query);
+  }
+  
+  async updateVerificationCode(email, code) {
+    const query = {
+      text: `
+        UPDATE users
+        SET verification_code = $1
+        WHERE email = $2
+      `,
+      values: [code, email],
+    };
+    await pool.query(query);
+  }
+
+  async updatePassword(email, passwordHash) {
+    const query = {
+      text: `
+        UPDATE users
+        SET password_hash = $1,
+            verification_code = NULL
+        WHERE email = $2
+      `,
+      values: [passwordHash, email],
+    };
+    await pool.query(query);
+  }
 }
 
 module.exports = new UserRepository();
