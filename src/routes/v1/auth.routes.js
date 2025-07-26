@@ -56,7 +56,7 @@ router.post("/register", validate("register"), async (req, res) => {
       .status(201)
       .json(successResponse({ message: result.message, data: result.user }));
   } catch (err) {
-    logger.error("Error in register:", err);
+    console.log("Error in register:", err);
     await failedResponse({ res, req, errors: err });
   }
 });
