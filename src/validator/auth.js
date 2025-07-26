@@ -42,6 +42,7 @@ exports.validate = (method) => {
       ];
     }
 
+    case "resend-verification":
     case "forgot-password": {
       return [
         body("email")
@@ -51,7 +52,7 @@ exports.validate = (method) => {
       ];
     }
 
-    case "verify-code": {
+    case "verify-email": {
       return [
         body("email")
           .exists().withMessage("Email is required")

@@ -279,7 +279,7 @@ router.post(
  *       200:
  *         description: Code verified successfully
  */
-router.post("/verify-code", validate("verify-code"), async (req, res) => {
+router.post("/verify-email", validate("verify-email"), async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty())
@@ -288,7 +288,7 @@ router.post("/verify-code", validate("verify-code"), async (req, res) => {
         statusCode: 400,
         errors: errors.array(),
       });
-    const result = await authController.verifyCode(req);
+    const result = await authController.verifyEmail(req);
     res
       .status(201)
       .json(successResponse({ message: result.message, data: result.user }));
@@ -297,6 +297,54 @@ router.post("/verify-code", validate("verify-code"), async (req, res) => {
     await failedResponse({ res, req, errors: err });
   }
 });
+
+/**
+ * @swagger
+ * /v1/auth/resend-verification:
+ *   post:
+ *     summary: Resend the email verification code
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Verification code resent successfully
+ */
+router.post("/resend-verification", validate("resend-verification"), async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty())
+      throw new CustomError({
+        message: "Validation failed",
+        statusCode: 400,
+        errors: errors.array(),
+      });
+
+    const result = await authController.resendVerification(req);
+
+    res
+      .status(200)
+      .json(
+        successResponse({
+          message: result.message,
+          data: result.data,
+        })
+      );
+  } catch (err) {
+    logger.error("Error in resendVerification:", err);
+    await failedResponse({ res, req, errors: err });
+  }
+});
+
 
 /**
  * @swagger
