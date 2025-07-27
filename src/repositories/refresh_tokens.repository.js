@@ -53,6 +53,18 @@ class RefreshTokensRepository {
     await client.query(query);
   }
 
+  async findAllValidByUser(user_id, client = pool) {
+    const query = {
+      text: `
+      SELECT * FROM refresh_tokens
+      WHERE user_id = $1 AND revoked_at IS NULL AND expires_at > NOW()
+    `,
+      values: [user_id],
+    };
+    const { rows } = await client.query(query);
+    return rows;
+  }
+
   async deleteExpiredTokens(client = pool) {
     const query = {
       text: `

@@ -2,14 +2,20 @@ const usersRepository = require("../../repositories/users.repository");
 const rolesRepository = require("../../repositories/roles.repository");
 const userRolesRepository = require("../../repositories/user_roles.repository");
 const verificationCodeRepository = require("../../repositories/verification_codes.repository");
+const refreshTokensRepository = require("../../repositories/refresh_tokens.repository");
 const emailService = require("../../config/nodemailer");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 const {
   generateVerificationCode,
 } = require("../../helpers/generateVerificationCode");
-const { successResponse } = require("../../helpers/response");
 const { withTransaction } = require("../../utils/db_transactions");
 const CustomError = require("../../helpers/customError");
+
+
+const ACCESS_TOKEN_EXP = process.env.JWT_ACCESS_EXP || "15m";
+const REFRESH_TOKEN_EXP_DAYS = process.env.JWT_REFRESH_EXP_DAYS || 30;
+
 class UsersController {
   async register(req) {
     const { email, password, name, avatar_url } = req.body;
@@ -94,12 +100,92 @@ class UsersController {
     }
   }
 
-  async login(req, res, next) {
-    try {
-      // TODO: implement login logic
-    } catch (err) {
-      next(err);
+  async login(req) {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      throw new CustomError({
+        message: "Email and password are required",
+        statusCode: 400,
+      });
     }
+
+    const { user, accessToken, refreshToken } = await withTransaction(
+      async (client) => {
+        const user = await usersRepository.findByEmail(email, client);
+        if (!user) {
+          throw new CustomError({
+            message: "Invalid credentials",
+            statusCode: 401,
+          });
+        }
+
+        const validPassword = await bcrypt.compare(
+          password,
+          user.password_hash
+        );
+        if (!validPassword) {
+          throw new CustomError({
+            message: "Invalid credentials",
+            statusCode: 401,
+          });
+        }
+
+        if (!user.is_email_verified) {
+          throw new CustomError({
+            message: "Email not verified",
+            statusCode: 403,
+          });
+        }
+
+        // create tokens
+        const accessToken = jwt.sign(
+          { sub: user.id },
+          process.env.JWT_SECRET,
+          {
+            expiresIn: ACCESS_TOKEN_EXP,
+          }
+        );
+
+        const rawRefreshToken = jwt.sign(
+          { sub: user.id },
+          process.env.JWT_REFRESH_SECRET,
+          {
+            expiresIn: `${REFRESH_TOKEN_EXP_DAYS}d`,
+          }
+        );
+
+        // hash refresh token for storage
+        const tokenHash = await bcrypt.hash(rawRefreshToken, 10);
+        const expiresAt = new Date(
+          Date.now() + REFRESH_TOKEN_EXP_DAYS * 24 * 60 * 60 * 1000
+        );
+
+        // revoke all old tokens for user (optional cleanup)
+        await refreshTokensRepository.revokeAllForUser(user.id, client);
+
+        // store hashed token
+        await refreshTokensRepository.createRefreshToken(
+          user.id,
+          tokenHash,
+          expiresAt,
+          client
+        );
+
+        return { user, accessToken, refreshToken: rawRefreshToken };
+      }
+    );
+
+    return {
+      message: "Login successful",
+      data: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      },
+    };
   }
 
   async verifyEmail(req) {
@@ -160,71 +246,138 @@ class UsersController {
   }
 
   async resendVerification(req) {
-  const { email } = req.body;
+    const { email } = req.body;
 
-  if (!email) {
-    throw new CustomError({
-      message: "email is required",
-      statusCode: 400,
-    });
-  }
-
-  const { user, code } = await withTransaction(async (client) => {
-    const user = await usersRepository.findByEmail(email, client);
-    if (!user) {
+    if (!email) {
       throw new CustomError({
-        message: "User not found",
-        statusCode: 404,
-      });
-    }
-
-    if (user.is_email_verified) {
-      throw new CustomError({
-        message: "Email already verified",
+        message: "email is required",
         statusCode: 400,
       });
     }
 
-    await verificationCodeRepository.deleteCodesByUser(
-      user.id,
-      client
-    );
+    const { user, code } = await withTransaction(async (client) => {
+      const user = await usersRepository.findByEmail(email, client);
+      if (!user) {
+        throw new CustomError({
+          message: "User not found",
+          statusCode: 404,
+        });
+      }
 
-    // Generate new code
-    const rawCode = generateVerificationCode();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+      if (user.is_email_verified) {
+        throw new CustomError({
+          message: "Email already verified",
+          statusCode: 400,
+        });
+      }
 
-    await verificationCodeRepository.createVerificationCode(
-      user.id,
-      rawCode,
-      "email_verification",
-      expiresAt,
-      client
-    );
+      await verificationCodeRepository.deleteCodesByUser(user.id, client);
 
-    return { user, code: rawCode };
-  });
+      // Generate new code
+      const rawCode = generateVerificationCode();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-  // send email after commit
-  await emailService.sendRegisterMail({
-    to: email,
-    name: user.name,
-    code,
-  });
+      await verificationCodeRepository.createVerificationCode(
+        user.id,
+        rawCode,
+        "email_verification",
+        expiresAt,
+        client
+      );
 
-  return {
-    message: "Verification code resent successfully.",
-    data: {
-      id: user.id,
-      email: user.email,
+      return { user, code: rawCode };
+    });
+
+    // send email after commit
+    await emailService.sendRegisterMail({
+      to: email,
       name: user.name,
-      avatar_url: user.avatar_url,
-      created_at: user.created_at,
-      updated_at: user.updated_at,
-    },
-  };
-}
+      code,
+    });
 
+    return {
+      message: "Verification code resent successfully.",
+      data: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        avatar_url: user.avatar_url,
+        created_at: user.created_at,
+        updated_at: user.updated_at,
+      },
+    };
+  }
+
+  async refreshToken(req) {
+    const { refresh_token } = req.body;
+
+    if (!refresh_token) {
+      throw new CustomError({
+        message: "refresh_token is required",
+        statusCode: 400,
+      });
+    }
+
+    const { newAccessToken } = await withTransaction(async (client) => {
+      // verify JWT
+      let payload;
+      try {
+        payload = jwt.verify(refresh_token, process.env.JWT_REFRESH_SECRET);
+      } catch {
+        throw new CustomError({
+          message: "Invalid refresh token",
+          statusCode: 401,
+        });
+      }
+
+      const userId = payload.sub;
+
+      // find all valid refresh tokens for user
+      const validTokens = await refreshTokensRepository.findAllValidByUser(
+        userId,
+        client
+      );
+      if (!validTokens || validTokens.length === 0) {
+        throw new CustomError({
+          message: "Refresh token not found or expired",
+          statusCode: 401,
+        });
+      }
+
+      // match raw token against hashes
+      let matchedToken = null;
+      for (const t of validTokens) {
+        const match = await bcrypt.compare(refresh_token, t.token_hash);
+        if (match) {
+          matchedToken = t;
+          break;
+        }
+      }
+
+      if (!matchedToken) {
+        throw new CustomError({
+          message: "Invalid refresh token",
+          statusCode: 401,
+        });
+      }
+
+      // generate new access token
+      const newAccessToken = jwt.sign(
+        { sub: userId },
+        process.env.JWT_SECRET,
+        { expiresIn: ACCESS_TOKEN_EXP }
+      );
+
+      return { newAccessToken };
+    });
+
+    return {
+      message: "Token refreshed successfully",
+      data: {
+        access_token: newAccessToken,
+      },
+    };
+  }
 
   async deleteUser(req, res, next) {
     try {
