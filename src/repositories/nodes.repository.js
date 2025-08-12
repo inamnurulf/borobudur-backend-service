@@ -1,4 +1,3 @@
-// repositories/nodes.repository.js
 const pool = require("../config/db");
 
 class NodesRepository {
