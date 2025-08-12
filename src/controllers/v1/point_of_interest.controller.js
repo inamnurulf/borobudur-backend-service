@@ -86,6 +86,99 @@ class PointOfInterestController {
 
     return route;
   }
+
+  /**
+   * Get a single point of interest by ID.
+   * @param {object} req - Express request object.
+   * @returns {Promise<object>} A promise that resolves to the POI object.
+   */
+  async getPOIById(req) {
+    const { id } = req.params;
+    const poi = await poiRepository.findById(id);
+
+    if (!poi) {
+      throw new CustomError({
+        message: "POI not found.",
+        statusCode: 404,
+      });
+    }
+
+    return poi;
+  }
+
+  /**
+   * Create a new point of interest.
+   * @param {object} req - Express request object.
+   * @returns {Promise<object>} A promise that resolves to the newly created POI.
+   */
+  async createPOI(req) {
+    const {
+      node_id,
+      description,
+      opening_hours,
+      contact_info,
+      image_url,
+      rating,
+      metadata,
+      is_active,
+      category_ids,
+    } = req.body;
+
+    const newPoi = await poiRepository.createPOI(
+      node_id,
+      description,
+      opening_hours,
+      contact_info,
+      image_url,
+      rating,
+      metadata,
+      is_active,
+      category_ids
+    );
+
+    return newPoi;
+  }
+
+  /**
+   * Update an existing point of interest.
+   * @param {object} req - Express request object.
+   * @returns {Promise<object>} A promise that resolves to the updated POI.
+   */
+  async updatePOI(req) {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    const updatedPoi = await poiRepository.updatePOI(id, updateData);
+
+    if (!updatedPoi) {
+      throw new CustomError({
+        message: "POI not found.",
+        statusCode: 404,
+      });
+    }
+
+    return updatedPoi;
+  }
+
+  /**
+   * Delete a point of interest.
+   * @param {object} req - Express request object.
+   * @returns {Promise<void>} A promise that resolves when the POI is deleted.
+   */
+  async deletePOI(req) {
+    const { id } = req.params;
+    const poi = await poiRepository.findById(id);
+
+    if (!poi) {
+      throw new CustomError({
+        message: "POI not found.",
+        statusCode: 404,
+      });
+    }
+
+    await poiRepository.deletePOI(id);
+    return { message: "POI deleted successfully." };
+  }
 }
 
 module.exports = new PointOfInterestController();

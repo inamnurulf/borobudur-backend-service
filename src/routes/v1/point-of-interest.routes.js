@@ -28,9 +28,29 @@ const authenticate = require("../../middlewares/auth.middleware");
 router.get("/", async (req, res) => {
   try {
     const result = await poiController.getAllPOIs(req);
-    res.status(200).json(successResponse({ message: "POIs fetched", data: result }));
+    res
+      .status(200)
+      .json(successResponse({ message: "POIs fetched", data: result }));
   } catch (err) {
     logger.error("Error in getAllPOIs:", err);
+    await failedResponse({ res, req, errors: err });
+  }
+});
+
+router.post("/", authenticate, validate("createPOI"), async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      throw new CustomError({
+        message: "Validation failed",
+        statusCode: 400,
+        errors: errors.array(),
+      });
+    }
+    const result = await poiController.createPOI(req);
+    res.status(201).json(successResponse({ message: "POI created successfully", data: result }));
+  } catch (err) {
+    logger.error("Error in createPOI:", err);
     await failedResponse({ res, req, errors: err });
   }
 });
@@ -60,27 +80,25 @@ router.get("/", async (req, res) => {
  *       200:
  *         description: List of nearby POIs
  */
-router.get(
-  "/nearby",
-  validate("getNearbyPOIs"),
-  async (req, res) => {
-    try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        throw new CustomError({
-          message: "Validation failed",
-          statusCode: 400,
-          errors: errors.array(),
-        });
-      }
-      const result = await poiController.getNearbyPOIs(req);
-      res.status(200).json(successResponse({ message: "Nearby POIs fetched", data: result }));
-    } catch (err) {
-      logger.error("Error in getNearbyPOIs:", err);
-      await failedResponse({ res, req, errors: err });
+router.get("/nearby", validate("getNearbyPOIs"), async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      throw new CustomError({
+        message: "Validation failed",
+        statusCode: 400,
+        errors: errors.array(),
+      });
     }
+    const result = await poiController.getNearbyPOIs(req);
+    res
+      .status(200)
+      .json(successResponse({ message: "Nearby POIs fetched", data: result }));
+  } catch (err) {
+    logger.error("Error in getNearbyPOIs:", err);
+    await failedResponse({ res, req, errors: err });
   }
-);
+});
 
 /**
  * @swagger
@@ -122,12 +140,74 @@ router.get(
       // move poiId into query for controller
       req.query.poiId = req.params.poiId;
       const result = await poiController.routeToPOI(req);
-      res.status(200).json(successResponse({ message: "Route computed", data: result }));
+      res
+        .status(200)
+        .json(successResponse({ message: "Route computed", data: result }));
     } catch (err) {
       logger.error("Error in routeToPOI:", err);
       await failedResponse({ res, req, errors: err });
     }
   }
 );
+
+router.get("/:id", validate("getPOIById"), async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      throw new CustomError({
+        message: "Validation failed",
+        statusCode: 400,
+        errors: errors.array(),
+      });
+    }
+    const result = await poiController.getPOIById(req);
+    res
+      .status(200)
+      .json(successResponse({ message: "POI fetched", data: result }));
+  } catch (err) {
+    logger.error("Error in getPOIById:", err);
+    await failedResponse({ res, req, errors: err });
+  }
+});
+
+router.put("/:id", authenticate, validate("updatePOI"), async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      throw new CustomError({
+        message: "Validation failed",
+        statusCode: 400,
+        errors: errors.array(),
+      });
+    }
+    const result = await poiController.updatePOI(req);
+    res
+      .status(200)
+      .json(
+        successResponse({ message: "POI updated successfully", data: result })
+      );
+  } catch (err) {
+    logger.error("Error in updatePOI:", err);
+    await failedResponse({ res, req, errors: err });
+  }
+});
+
+router.delete("/:id", authenticate, validate("deletePOI"), async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      throw new CustomError({
+        message: "Validation failed",
+        statusCode: 400,
+        errors: errors.array(),
+      });
+    }
+    const result = await poiController.deletePOI(req);
+    res.status(200).json(successResponse({ message: result.message }));
+  } catch (err) {
+    logger.error("Error in deletePOI:", err);
+    await failedResponse({ res, req, errors: err });
+  }
+});
 
 module.exports = router;
