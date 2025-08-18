@@ -9,18 +9,18 @@ class UsersRepository {
    * @param {string|null} password_hash
    * @param {object} client
    */
-  async createUser(email, name = null, avatar_url = null, password_hash = null, client = pool) {
-    const query = {
-      text: `
-        INSERT INTO users (email, name, avatar_url, password_hash)
-        VALUES ($1, $2, $3, $4)
-        RETURNING *
-      `,
-      values: [email, name, avatar_url, password_hash],
-    };
-    const { rows } = await client.query(query);
-    return rows[0];
-  }
+async createUser(email, name = null, avatar_url = null, password_hash = null, isEmailVerified = false, client = pool) {
+  const query = {
+    text: `
+      INSERT INTO users (email, name, avatar_url, password_hash, is_email_verified)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *
+    `,
+    values: [email, name, avatar_url, password_hash, isEmailVerified],
+  };
+  const { rows } = await client.query(query);
+  return rows[0];
+}
 
   /**
    * Find user by email
