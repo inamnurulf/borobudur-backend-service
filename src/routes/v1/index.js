@@ -8,6 +8,7 @@ const pointOfInterestRoutes = require("./point-of-interest.routes");
 const providerRoutes = require("./provider.routes");
 const newsRoutes = require("./news.routes");
 const eventsRoutes = require("./events.routes");
+const templesRoutes = require("./temples.routes");
 
 router.use("/coordinate", coordinateRoutes);
 router.use("/auth", authRoutes);
@@ -17,5 +18,6 @@ router.use("/point-of-interest", pointOfInterestRoutes);
 router.use("/provider", providerRoutes);
 router.use("/news", newsRoutes);
 router.use("/events", eventsRoutes);
+router.use("/temples", templesRoutes);
 
 module.exports = router;
