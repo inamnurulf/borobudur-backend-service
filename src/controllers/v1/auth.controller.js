@@ -43,6 +43,7 @@ class UsersController {
         name,
         avatar_url,
         hashedPassword,
+        false,
         client
       );
 
