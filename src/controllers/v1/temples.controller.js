@@ -137,7 +137,7 @@ class TemplesController {
    * Compute navigation route
    */
   async getRoute(req) {
-    const { fromLat, fromLon, toNodeId, profile, area_id } = req.query;
+    const { fromLat, fromLon, toNodeId, profile } = req.query;
 
     if (!fromLat || !fromLon || !toNodeId) {
       throw new CustomError({
@@ -149,8 +149,7 @@ class TemplesController {
     const params = {
       from: [parseFloat(fromLon), parseFloat(fromLat)], // [lon, lat]
       to: parseInt(toNodeId),
-      profile: profile || "walking",
-      area_id: area_id ? parseInt(area_id) : null,
+      profile: profile || "walking"
     };
 
     const route = await withTransaction(async (client) => {

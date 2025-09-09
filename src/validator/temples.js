@@ -130,11 +130,6 @@ exports.validate = (method) => {
           .isIn(["walking", "accessible"])
           .withMessage("profile must be walking or accessible"),
 
-        query("area_id")
-          .optional()
-          .isInt({ min: 1 })
-          .withMessage("area_id must be integer"),
-
         query("alternatives")
           .optional()
           .isInt({ min: 0, max: 3 })
