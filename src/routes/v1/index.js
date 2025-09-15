@@ -9,6 +9,7 @@ const providerRoutes = require("./provider.routes");
 const newsRoutes = require("./news.routes");
 const eventsRoutes = require("./events.routes");
 const templesRoutes = require("./temples.routes");
+const articlesRoutes = require("./articles.routes");
 
 router.use("/coordinate", coordinateRoutes);
 router.use("/auth", authRoutes);
@@ -19,5 +20,6 @@ router.use("/provider", providerRoutes);
 router.use("/news", newsRoutes);
 router.use("/events", eventsRoutes);
 router.use("/temples", templesRoutes);
+router.use("/articles", articlesRoutes);
 
 module.exports = router;
