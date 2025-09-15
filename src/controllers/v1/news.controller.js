@@ -3,6 +3,7 @@ const { withTransaction } = require("../../utils/db_transactions");
 const CustomError = require("../../helpers/customError");
 const imageService = require("../../services/image_services");
 const path = require("path");
+const { resolveExt } = require("./helper/fileExt");
 
 class NewsController {
   /**
@@ -109,8 +110,7 @@ class NewsController {
 
     // If a file was uploaded, push it to storage + create a thumbnail
     if (req.file) {
-      let ext = path.extname(req.file.originalname).toLowerCase();
-
+      const ext = resolveExt(req.file.originalname, req.file.mimetype);
       const filename = `${slug}${ext}`;
       const uploaded = await imageService.uploadImageWithThumbnail({
         buffer: req.file.buffer,
@@ -240,13 +240,8 @@ class NewsController {
       // 3) If a new file is uploaded, overwrite the stored image & thumb
       if (req.file && req.file.buffer) {
         // prefer the true type from MIME
-        let ext = path.extname(req.file.originalname).toLowerCase();
-        if (!ext) {
-          // fallback to original name's ext if MIME wasn't mapped
-          ext = path.extname(req.file.originalname).toLowerCase();
-        }
-
-        const filename = `${slugToUse}${ext || ""}`;
+        const ext = resolveExt(req.file.originalname, req.file.mimetype);
+        const filename = `${slug}${ext}`;
 
         const uploaded = await imageService.uploadImageWithThumbnail({
           buffer: req.file.buffer,

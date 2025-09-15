@@ -1,24 +1,28 @@
 const eventsRepository = require("../../repositories/events.repository");
 const { withTransaction } = require("../../utils/db_transactions");
 const CustomError = require("../../helpers/customError");
+const imageService = require("../../services/image_services");
+const path = require("path");
+const { resolveExt } = require("./helper/fileExt");
 
 class EventsController {
   /**
    * Get all events
    */
   async getAllEvents(req) {
-    const { status, type, location, start_date, end_date, page, limit } = req.query;
-    
+    const { status, type, location, start_date, end_date, page, limit } =
+      req.query;
+
     const filters = {};
     if (status) filters.status = status;
     if (type) filters.type = type;
     if (location) filters.location = location;
     if (start_date) filters.start_date = start_date;
     if (end_date) filters.end_date = end_date;
-    
+
     const pagination = {
       page: page ? parseInt(page) : 1,
-      limit: limit ? parseInt(limit) : 10
+      limit: limit ? parseInt(limit) : 10,
     };
 
     const events = await withTransaction(async (client) => {
@@ -83,31 +87,31 @@ class EventsController {
   }
 
   /**
-   * Create a new event
+   * Create a new event (supports image upload like News)
    */
   async createEvent(req) {
-    const { 
-      name, 
-      description, 
-      type, 
-      start_date, 
+    let {
+      name,
+      description,
+      type,
+      start_date,
       end_date,
-      location, 
-      image_url, 
-      thumbnail_image_url, 
-      slug, 
+      location,
+      image_url,
+      thumbnail_image_url,
+      slug,
       status,
-      seo_metadata 
+      seo_metadata,
     } = req.body;
 
     if (!name || !description || !type || !start_date || !location || !status) {
       throw new CustomError({
-        message: "name, description, type, start_date, location, and status are required",
+        message:
+          "name, description, type, start_date, location, and status are required",
         statusCode: 400,
       });
     }
 
-    // Validate date logic
     if (end_date && new Date(start_date) >= new Date(end_date)) {
       throw new CustomError({
         message: "End date must be after start date",
@@ -115,8 +119,43 @@ class EventsController {
       });
     }
 
+    if (typeof seo_metadata === "string") {
+      try {
+        seo_metadata = JSON.parse(seo_metadata);
+      } catch {
+        // ignore bad JSON; keep as string or null
+      }
+    }
+
+    // If a file was uploaded, push it to storage + create a thumbnail
+    if (req.file && req.file.buffer) {
+      const ext = resolveExt(req.file.originalname, req.file.mimetype);
+      const slugForFile = slug || this.generateSlug(name);
+      const filename = `${slugForFile}${ext}`;
+
+      const uploaded = await imageService.uploadImageWithThumbnail({
+        buffer: req.file.buffer,
+        filename,
+        mimeType: req.file.mimetype,
+        public: true,
+        thumb: { width: 640, height: 360, format: "webp", quality: 72 },
+        // compress: { format: "webp", quality: 65 }, // optional
+      });
+
+      image_url =
+        uploaded?.original?.url ||
+        (uploaded?.original?.id
+          ? imageService.getImageUrl(uploaded.original.id)
+          : null);
+
+      thumbnail_image_url =
+        uploaded?.thumbnail?.url ||
+        (uploaded?.thumbnail?.id
+          ? imageService.getImageUrl(uploaded.thumbnail.id)
+          : null);
+    }
+
     const newEvent = await withTransaction(async (client) => {
-      // Check if slug already exists (if provided)
       if (slug) {
         const existingSlug = await eventsRepository.findBySlug(slug, client);
         if (existingSlug) {
@@ -127,20 +166,23 @@ class EventsController {
         }
       }
 
-      const created = await eventsRepository.createEvent({
-        name,
-        description,
-        type,
-        start_date,
-        end_date,
-        location,
-        image_url,
-        thumbnail_image_url,
-        slug: slug || this.generateSlug(name),
-        status,
-        seo_metadata
-      }, client);
-      
+      const created = await eventsRepository.createEvent(
+        {
+          name,
+          description,
+          type,
+          start_date,
+          end_date,
+          location,
+          image_url: image_url || null,
+          thumbnail_image_url: thumbnail_image_url || null,
+          slug: slug || this.generateSlug(name),
+          status,
+          seo_metadata: seo_metadata ?? null,
+        },
+        client
+      );
+
       return created;
     });
 
@@ -148,22 +190,22 @@ class EventsController {
   }
 
   /**
-   * Update event
+   * Update event (overwrite image if a new file is uploaded)
    */
   async updateEvent(req) {
     const { id } = req.params;
-    const { 
-      name, 
-      description, 
-      type, 
-      start_date, 
+    let {
+      name,
+      description,
+      type,
+      start_date,
       end_date,
-      location, 
-      image_url, 
-      thumbnail_image_url, 
-      slug, 
+      location,
+      image_url,
+      thumbnail_image_url,
+      slug,
       status,
-      seo_metadata 
+      seo_metadata,
     } = req.body;
 
     if (!id) {
@@ -173,12 +215,19 @@ class EventsController {
       });
     }
 
-    // Validate date logic if both dates are provided
     if (start_date && end_date && new Date(start_date) >= new Date(end_date)) {
       throw new CustomError({
         message: "End date must be after start date",
         statusCode: 400,
       });
+    }
+
+    if (typeof seo_metadata === "string") {
+      try {
+        seo_metadata = JSON.parse(seo_metadata);
+      } catch {
+        // ignore bad JSON
+      }
     }
 
     const updatedEvent = await withTransaction(async (client) => {
@@ -190,7 +239,6 @@ class EventsController {
         });
       }
 
-      // Check if slug already exists (if provided and different from current)
       if (slug && slug !== existing.slug) {
         const existingSlug = await eventsRepository.findBySlug(slug, client);
         if (existingSlug) {
@@ -201,20 +249,73 @@ class EventsController {
         }
       }
 
-      const updated = await eventsRepository.updateEvent(id, {
-        name,
-        description,
-        type,
-        start_date,
-        end_date,
-        location,
-        image_url,
-        thumbnail_image_url,
-        slug,
-        status,
-        seo_metadata
-      }, client);
-      
+      const slugToUse = slug || existing.slug;
+
+      // Start with existing image URLs unless explicitly overridden
+      let nextImageUrl =
+        typeof image_url !== "undefined" ? image_url : existing.image_url;
+      let nextThumbUrl =
+        typeof thumbnail_image_url !== "undefined"
+          ? thumbnail_image_url
+          : existing.thumbnail_image_url;
+
+      // Handle new uploaded image (overwrite behavior)
+      if (req.file && req.file.buffer) {
+        const ext = resolveExt(req.file.originalname, req.file.mimetype);
+        const filename = `${slugToUse}${ext || ""}`;
+
+        const uploaded = await imageService.uploadImageWithThumbnail({
+          buffer: req.file.buffer,
+          filename,
+          mimeType: req.file.mimetype,
+          public: true,
+          overwrite: true, // let your service replace same-key objects
+          thumb: { width: 640, height: 360, format: "webp", quality: 72 },
+          // compress: { format: "webp", quality: 65 }, // optional
+        });
+
+        nextImageUrl =
+          uploaded?.original?.url ||
+          (uploaded?.original?.id
+            ? imageService.getImageUrl(uploaded.original.id)
+            : null);
+
+        nextThumbUrl =
+          uploaded?.thumbnail?.url ||
+          (uploaded?.thumbnail?.id
+            ? imageService.getImageUrl(uploaded.thumbnail.id)
+            : null);
+      }
+
+      const updated = await eventsRepository.updateEvent(
+        id,
+        {
+          name: typeof name !== "undefined" ? name : existing.name,
+          description:
+            typeof description !== "undefined"
+              ? description
+              : existing.description,
+          type: typeof type !== "undefined" ? type : existing.type,
+          start_date:
+            typeof start_date !== "undefined"
+              ? start_date
+              : existing.start_date,
+          end_date:
+            typeof end_date !== "undefined" ? end_date : existing.end_date,
+          location:
+            typeof location !== "undefined" ? location : existing.location,
+          image_url: nextImageUrl ?? null,
+          thumbnail_image_url: nextThumbUrl ?? null,
+          slug: slugToUse,
+          status: typeof status !== "undefined" ? status : existing.status,
+          seo_metadata:
+            typeof seo_metadata !== "undefined"
+              ? seo_metadata
+              : existing.seo_metadata,
+        },
+        client
+      );
+
       return updated;
     });
 
@@ -283,8 +384,8 @@ class EventsController {
   generateSlug(name) {
     return name
       .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
       .substring(0, 255);
   }
 }

@@ -1,4 +1,4 @@
-const { createSecureUpload } = require('../helpers/multer.middleware'); 
+const { createSecureUpload } = require('../helpers/multer'); 
 
 const upload = createSecureUpload({
   allowImages: true,

@@ -7,6 +7,7 @@ const { successResponse, failedResponse } = require("../../helpers/response");
 const logger = require("../../config/logger");
 const CustomError = require("../../helpers/customError");
 const authenticate = require("../../middlewares/auth.middleware");
+const upload = require('../../middlewares/multer.middleware');
 
 /**
  * @swagger
@@ -70,7 +71,9 @@ const authenticate = require("../../middlewares/auth.middleware");
 router.get("/", async (req, res) => {
   try {
     const result = await eventsController.getAllEvents(req);
-    res.status(200).json(successResponse({ message: "Events fetched", data: result }));
+    res
+      .status(200)
+      .json(successResponse({ message: "Events fetched", data: result }));
   } catch (err) {
     logger.error("Error in getAllEvents:", err);
     await failedResponse({ res, req, errors: err });
@@ -96,7 +99,9 @@ router.get("/", async (req, res) => {
 router.get("/slug/:slug", async (req, res) => {
   try {
     const result = await eventsController.getEventBySlug(req);
-    res.status(200).json(successResponse({ message: "Event detail fetched", data: result }));
+    res
+      .status(200)
+      .json(successResponse({ message: "Event detail fetched", data: result }));
   } catch (err) {
     logger.error("Error in getEventBySlug:", err);
     await failedResponse({ res, req, errors: err });
@@ -122,7 +127,9 @@ router.get("/slug/:slug", async (req, res) => {
 router.get("/:id", authenticate, async (req, res) => {
   try {
     const result = await eventsController.getEventById(req);
-    res.status(200).json(successResponse({ message: "Event detail fetched", data: result }));
+    res
+      .status(200)
+      .json(successResponse({ message: "Event detail fetched", data: result }));
   } catch (err) {
     logger.error("Error in getEventById:", err);
     await failedResponse({ res, req, errors: err });
@@ -184,24 +191,32 @@ router.get("/:id", authenticate, async (req, res) => {
  *       201:
  *         description: Event created successfully
  */
-router.post("/", authenticate, validate("createEvent"), async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      throw new CustomError({
-        message: "Validation failed",
-        statusCode: 400,
-        errors: errors.array(),
-      });
-    }
+router.post(
+  "/",
+  authenticate,
+  ...upload.uploadSingle("headerImage"),
+  validate("createEvent"),
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        throw new CustomError({
+          message: "Validation failed",
+          statusCode: 400,
+          errors: errors.array(),
+        });
+      }
 
-    const result = await eventsController.createEvent(req);
-    res.status(201).json(successResponse({ message: "Event created", data: result }));
-  } catch (err) {
-    logger.error("Error in createEvent:", err);
-    await failedResponse({ res, req, errors: err });
+      const result = await eventsController.createEvent(req);
+      res
+        .status(201)
+        .json(successResponse({ message: "Event created", data: result }));
+    } catch (err) {
+      logger.error("Error in createEvent:", err);
+      await failedResponse({ res, req, errors: err });
+    }
   }
-});
+);
 
 /**
  * @swagger
@@ -257,24 +272,32 @@ router.post("/", authenticate, validate("createEvent"), async (req, res) => {
  *       200:
  *         description: Event updated
  */
-router.put("/:id", authenticate, validate("updateEvent"), async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      throw new CustomError({
-        message: "Validation failed",
-        statusCode: 400,
-        errors: errors.array(),
-      });
-    }
+router.put(
+  "/:id",
+  authenticate,
+  ...upload.uploadSingle("headerImage"),
+  validate("updateEvent"),
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        throw new CustomError({
+          message: "Validation failed",
+          statusCode: 400,
+          errors: errors.array(),
+        });
+      }
 
-    const result = await eventsController.updateEvent(req);
-    res.status(200).json(successResponse({ message: "Event updated", data: result }));
-  } catch (err) {
-    logger.error("Error in updateEvent:", err);
-    await failedResponse({ res, req, errors: err });
+      const result = await eventsController.updateEvent(req);
+      res
+        .status(200)
+        .json(successResponse({ message: "Event updated", data: result }));
+    } catch (err) {
+      logger.error("Error in updateEvent:", err);
+      await failedResponse({ res, req, errors: err });
+    }
   }
-});
+);
 
 /**
  * @swagger
@@ -295,7 +318,9 @@ router.put("/:id", authenticate, validate("updateEvent"), async (req, res) => {
 router.patch("/:id/views", async (req, res) => {
   try {
     const result = await eventsController.incrementViews(req);
-    res.status(200).json(successResponse({ message: "Views incremented", data: result }));
+    res
+      .status(200)
+      .json(successResponse({ message: "Views incremented", data: result }));
   } catch (err) {
     logger.error("Error in incrementViews:", err);
     await failedResponse({ res, req, errors: err });
@@ -321,7 +346,9 @@ router.patch("/:id/views", async (req, res) => {
 router.delete("/:id", authenticate, async (req, res) => {
   try {
     const result = await eventsController.deleteEvent(req);
-    res.status(200).json(successResponse({ message: "Event deleted", data: result }));
+    res
+      .status(200)
+      .json(successResponse({ message: "Event deleted", data: result }));
   } catch (err) {
     logger.error("Error in deleteEvent:", err);
     await failedResponse({ res, req, errors: err });
