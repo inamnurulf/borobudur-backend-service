@@ -228,7 +228,7 @@ router.post("/", authenticate, ...upload.uploadSingle('headerImage'), validate("
  *       200:
  *         description: News updated
  */
-router.put("/:id", authenticate, validate("updateNews"), async (req, res) => {
+router.put("/:id", authenticate,...upload.uploadSingle("headerImage"), validate("updateNews"), async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {

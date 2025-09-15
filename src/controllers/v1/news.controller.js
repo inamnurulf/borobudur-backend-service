@@ -4,7 +4,6 @@ const CustomError = require("../../helpers/customError");
 const imageService = require("../../services/image_services");
 const path = require("path");
 
-
 class NewsController {
   /**
    * Get all news
@@ -171,14 +170,19 @@ class NewsController {
   /**
    * Update news
    */
+  /**
+   * Update news (and overwrite image if a new file is uploaded)
+   */
   async updateNews(req) {
     const { id } = req.params;
-    const {
+
+    // Body fields (may be partially provided)
+    let {
       title,
       content,
       publication_date,
-      image_url,
-      thumbnail_image_url,
+      image_url, // optional manual override
+      thumbnail_image_url, // optional manual override
       slug,
       author,
       status,
@@ -192,7 +196,17 @@ class NewsController {
       });
     }
 
+    // Parse SEO metadata if it’s a JSON string
+    if (typeof seo_metadata === "string") {
+      try {
+        seo_metadata = JSON.parse(seo_metadata);
+      } catch {
+        // keep original string or null—don’t block update
+      }
+    }
+
     const updatedNews = await withTransaction(async (client) => {
+      // 1) Ensure the record exists
       const existing = await newsRepository.findById(id, client);
       if (!existing) {
         throw new CustomError({
@@ -201,7 +215,7 @@ class NewsController {
         });
       }
 
-      // Check if slug already exists (if provided and different from current)
+      // 2) Slug uniqueness check when slug changes
       if (slug && slug !== existing.slug) {
         const existingSlug = await newsRepository.findBySlug(slug, client);
         if (existingSlug) {
@@ -212,18 +226,71 @@ class NewsController {
         }
       }
 
+      // Determine the slug to use for filenames (new or existing)
+      const slugToUse = slug || existing.slug;
+
+      // Start from previous values; only change what’s provided
+      let nextImageUrl =
+        typeof image_url !== "undefined" ? image_url : existing.image_url;
+      let nextThumbUrl =
+        typeof thumbnail_image_url !== "undefined"
+          ? thumbnail_image_url
+          : existing.thumbnail_image_url;
+
+      // 3) If a new file is uploaded, overwrite the stored image & thumb
+      if (req.file && req.file.buffer) {
+        // prefer the true type from MIME
+        let ext = path.extname(req.file.originalname).toLowerCase();
+        if (!ext) {
+          // fallback to original name's ext if MIME wasn't mapped
+          ext = path.extname(req.file.originalname).toLowerCase();
+        }
+
+        const filename = `${slugToUse}${ext || ""}`;
+
+        const uploaded = await imageService.uploadImageWithThumbnail({
+          buffer: req.file.buffer,
+          filename,
+          mimeType: req.file.mimetype,
+          public: true,
+          // overwrite behavior — implement inside your service if needed
+          overwrite: true,
+          thumb: { width: 640, height: 360, format: "webp", quality: 72 },
+          // compress: { format: "webp", quality: 65 }, // optional
+        });
+
+        nextImageUrl =
+          uploaded?.original?.url ||
+          (uploaded?.original?.id
+            ? imageService.getImageUrl(uploaded.original.id)
+            : null);
+
+        nextThumbUrl =
+          uploaded?.thumbnail?.url ||
+          (uploaded?.thumbnail?.id
+            ? imageService.getImageUrl(uploaded.thumbnail.id)
+            : null);
+      }
+
+      // 4) Persist update (only provided fields will overwrite; others keep existing)
       const updated = await newsRepository.updateNews(
         id,
         {
-          title,
-          content,
-          publication_date,
-          image_url,
-          thumbnail_image_url,
-          slug,
-          author,
-          status,
-          seo_metadata,
+          title: typeof title !== "undefined" ? title : existing.title,
+          content: typeof content !== "undefined" ? content : existing.content,
+          publication_date:
+            typeof publication_date !== "undefined"
+              ? publication_date
+              : existing.publication_date,
+          image_url: nextImageUrl ?? null,
+          thumbnail_image_url: nextThumbUrl ?? null,
+          slug: slugToUse,
+          author: typeof author !== "undefined" ? author : existing.author,
+          status: typeof status !== "undefined" ? status : existing.status,
+          seo_metadata:
+            typeof seo_metadata !== "undefined"
+              ? seo_metadata
+              : existing.seo_metadata,
         },
         client
       );
