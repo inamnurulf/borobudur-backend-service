@@ -1,7 +1,9 @@
 const newsRepository = require("../../repositories/news.repository");
 const { withTransaction } = require("../../utils/db_transactions");
 const CustomError = require("../../helpers/customError");
-const imageService = require("../../services/image_services"); 
+const imageService = require("../../services/image_services");
+const path = require("path");
+
 
 class NewsController {
   /**
@@ -9,14 +11,14 @@ class NewsController {
    */
   async getAllNews(req) {
     const { status, author, page, limit } = req.query;
-    
+
     const filters = {};
     if (status) filters.status = status;
     if (author) filters.author = author;
-    
+
     const pagination = {
       page: page ? parseInt(page) : 1,
-      limit: limit ? parseInt(limit) : 10
+      limit: limit ? parseInt(limit) : 10,
     };
 
     const news = await withTransaction(async (client) => {
@@ -83,15 +85,8 @@ class NewsController {
   /**
    * Create a new news
    */
- async createNews(req) {
-    const {
-      title,
-      content,
-      publication_date,
-      slug,
-      author,
-      status,
-    } = req.body;
+  async createNews(req) {
+    const { title, content, publication_date, slug, author, status } = req.body;
 
     let { image_url, thumbnail_image_url, seo_metadata } = req.body;
 
@@ -115,8 +110,9 @@ class NewsController {
 
     // If a file was uploaded, push it to storage + create a thumbnail
     if (req.file) {
-      const filename = req.file.safeOriginalName || req.file.originalname;
+      let ext = path.extname(req.file.originalname).toLowerCase();
 
+      const filename = `${slug}${ext}`;
       const uploaded = await imageService.uploadImageWithThumbnail({
         buffer: req.file.buffer,
         filename,
@@ -130,8 +126,7 @@ class NewsController {
 
       // Prefer service URLs; fallback to URL builder if service omits url
       image_url =
-        uploaded.original.url ||
-        imageService.getImageUrl(uploaded.original.id);
+        uploaded.original.url || imageService.getImageUrl(uploaded.original.id);
 
       thumbnail_image_url =
         uploaded.thumbnail?.url ||
@@ -178,16 +173,16 @@ class NewsController {
    */
   async updateNews(req) {
     const { id } = req.params;
-    const { 
-      title, 
-      content, 
-      publication_date, 
-      image_url, 
-      thumbnail_image_url, 
-      slug, 
-      author, 
+    const {
+      title,
+      content,
+      publication_date,
+      image_url,
+      thumbnail_image_url,
+      slug,
+      author,
       status,
-      seo_metadata 
+      seo_metadata,
     } = req.body;
 
     if (!id) {
@@ -217,18 +212,22 @@ class NewsController {
         }
       }
 
-      const updated = await newsRepository.updateNews(id, {
-        title,
-        content,
-        publication_date,
-        image_url,
-        thumbnail_image_url,
-        slug,
-        author,
-        status,
-        seo_metadata
-      }, client);
-      
+      const updated = await newsRepository.updateNews(
+        id,
+        {
+          title,
+          content,
+          publication_date,
+          image_url,
+          thumbnail_image_url,
+          slug,
+          author,
+          status,
+          seo_metadata,
+        },
+        client
+      );
+
       return updated;
     });
 
@@ -297,8 +296,8 @@ class NewsController {
   generateSlug(title) {
     return title
       .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
       .substring(0, 255);
   }
 }
