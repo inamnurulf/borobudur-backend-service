@@ -29,6 +29,11 @@ const v1Routes = require('./routes/v1')
 app.use('/api/example', exampleRoutes);
 app.use("/v1", v1Routes)
 
+const { failedResponse } = require('./helpers/response.js');
+app.use((err, req, res, next) => {
+  return failedResponse({ res, req, errors: err });
+});
+
 const setupSwagger = require('./config/swagger.js');
 setupSwagger(app);
 

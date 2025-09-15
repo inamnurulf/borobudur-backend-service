@@ -1,6 +1,7 @@
 const newsRepository = require("../../repositories/news.repository");
 const { withTransaction } = require("../../utils/db_transactions");
 const CustomError = require("../../helpers/customError");
+const imageService = require("../../services/image_services"); 
 
 class NewsController {
   /**
@@ -82,28 +83,65 @@ class NewsController {
   /**
    * Create a new news
    */
-  async createNews(req) {
-    const { 
-      title, 
-      content, 
-      publication_date, 
-      image_url, 
-      thumbnail_image_url, 
-      slug, 
-      author, 
+ async createNews(req) {
+    const {
+      title,
+      content,
+      publication_date,
+      slug,
+      author,
       status,
-      seo_metadata 
     } = req.body;
 
+    let { image_url, thumbnail_image_url, seo_metadata } = req.body;
+
+    // Basic required validation
     if (!title || !content || !publication_date || !author || !status) {
       throw new CustomError({
-        message: "title, content, publication_date, author, and status are required",
+        message:
+          "title, content, publication_date, author, and status are required",
         statusCode: 400,
       });
     }
 
+    // Parse SEO metadata if it’s a JSON string
+    if (typeof seo_metadata === "string") {
+      try {
+        seo_metadata = JSON.parse(seo_metadata);
+      } catch {
+        // keep original string or null—don’t block creation
+      }
+    }
+
+    // If a file was uploaded, push it to storage + create a thumbnail
+    if (req.file) {
+      const filename = req.file.safeOriginalName || req.file.originalname;
+
+      const uploaded = await imageService.uploadImageWithThumbnail({
+        buffer: req.file.buffer,
+        filename,
+        mimeType: req.file.mimetype,
+        public: true,
+        // tweak as needed:
+        thumb: { width: 640, height: 360, format: "webp", quality: 72 },
+        // set to true or pass {format, quality} if you also want a compressed original stored
+        // compress: { format: "webp", quality: 65 },
+      });
+
+      // Prefer service URLs; fallback to URL builder if service omits url
+      image_url =
+        uploaded.original.url ||
+        imageService.getImageUrl(uploaded.original.id);
+
+      thumbnail_image_url =
+        uploaded.thumbnail?.url ||
+        (uploaded.thumbnail?.id
+          ? imageService.getImageUrl(uploaded.thumbnail.id)
+          : null);
+    }
+
+    // Transactional create (keeps your slug uniqueness check)
     const newNews = await withTransaction(async (client) => {
-      // Check if slug already exists (if provided)
       if (slug) {
         const existingSlug = await newsRepository.findBySlug(slug, client);
         if (existingSlug) {
@@ -114,18 +152,21 @@ class NewsController {
         }
       }
 
-      const created = await newsRepository.createNews({
-        title,
-        content,
-        publication_date,
-        image_url,
-        thumbnail_image_url,
-        slug: slug || this.generateSlug(title),
-        author,
-        status,
-        seo_metadata
-      }, client);
-      
+      const created = await newsRepository.createNews(
+        {
+          title,
+          content,
+          publication_date,
+          image_url: image_url || null,
+          thumbnail_image_url: thumbnail_image_url || null,
+          slug: slug || this.generateSlug(title),
+          author,
+          status,
+          seo_metadata: seo_metadata ?? null,
+        },
+        client
+      );
+
       return created;
     });
 
