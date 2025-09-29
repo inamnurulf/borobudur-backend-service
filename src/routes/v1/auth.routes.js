@@ -165,7 +165,7 @@ router.post("/refresh-token", validate("refreshToken"), async (req, res) => {
  *       200:
  *         description: Logged out successfully
  */
-router.post("/logout", validate("logout"), async (req, res) => {
+router.post("/logout", authenticate, validate("logout"), async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty())
@@ -319,32 +319,33 @@ router.post("/verify-email", validate("verify-email"), async (req, res) => {
  *       200:
  *         description: Verification code resent successfully
  */
-router.post("/resend-verification", validate("resend-verification"), async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty())
-      throw new CustomError({
-        message: "Validation failed",
-        statusCode: 400,
-        errors: errors.array(),
-      });
+router.post(
+  "/resend-verification",
+  validate("resend-verification"),
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty())
+        throw new CustomError({
+          message: "Validation failed",
+          statusCode: 400,
+          errors: errors.array(),
+        });
 
-    const result = await authController.resendVerification(req);
+      const result = await authController.resendVerification(req);
 
-    res
-      .status(200)
-      .json(
+      res.status(200).json(
         successResponse({
           message: result.message,
           data: result.data,
         })
       );
-  } catch (err) {
-    logger.error("Error in resendVerification:", err);
-    await failedResponse({ res, req, errors: err });
+    } catch (err) {
+      logger.error("Error in resendVerification:", err);
+      await failedResponse({ res, req, errors: err });
+    }
   }
-});
-
+);
 
 /**
  * @swagger

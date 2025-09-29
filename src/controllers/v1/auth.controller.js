@@ -11,7 +11,7 @@ const {
 } = require("../../helpers/generateVerificationCode");
 const { withTransaction } = require("../../utils/db_transactions");
 const CustomError = require("../../helpers/customError");
-
+const crypto = require("crypto");
 
 const ACCESS_TOKEN_EXP = process.env.JWT_ACCESS_EXP || "15m";
 const REFRESH_TOKEN_EXP_DAYS = process.env.JWT_REFRESH_EXP_DAYS || 30;
@@ -140,24 +140,21 @@ class UsersController {
         }
 
         // create tokens
-        const accessToken = jwt.sign(
-          { sub: user.id },
-          process.env.JWT_SECRET,
-          {
-            expiresIn: ACCESS_TOKEN_EXP,
-          }
-        );
+        const accessToken = jwt.sign({ sub: user.id }, process.env.JWT_SECRET, {
+          expiresIn: ACCESS_TOKEN_EXP,
+        });
 
         const rawRefreshToken = jwt.sign(
-          { sub: user.id },
+          {
+            sub: user.id,
+            jti: crypto.randomBytes(16).toString("hex"),
+          },
           process.env.JWT_REFRESH_SECRET,
           {
             expiresIn: `${REFRESH_TOKEN_EXP_DAYS}d`,
           }
         );
 
-        // hash refresh token for storage
-        const tokenHash = await bcrypt.hash(rawRefreshToken, 10);
         const expiresAt = new Date(
           Date.now() + REFRESH_TOKEN_EXP_DAYS * 24 * 60 * 60 * 1000
         );
@@ -165,10 +162,10 @@ class UsersController {
         // revoke all old tokens for user (optional cleanup)
         await refreshTokensRepository.revokeAllForUser(user.id, client);
 
-        // store hashed token
+        // Store plain token (your repository's createRefreshToken expects token_hash parameter)
         await refreshTokensRepository.createRefreshToken(
           user.id,
-          tokenHash,
+          rawRefreshToken, // 👈 Pass plain token, it goes into token_hash column
           expiresAt,
           client
         );
@@ -319,11 +316,91 @@ class UsersController {
       });
     }
 
-    const { newAccessToken } = await withTransaction(async (client) => {
-      // verify JWT
+    const { newAccessToken, newRefreshToken } = await withTransaction(
+      async (client) => {
+        // 1) Verify the incoming refresh token JWT
+        let payload;
+        try {
+          payload = jwt.verify(refresh_token, process.env.JWT_REFRESH_SECRET);
+        } catch {
+          throw new CustomError({
+            message: "Invalid refresh token",
+            statusCode: 401,
+          });
+        }
+        const userId = payload.sub;
+
+        // 2) Find the token directly using findValidToken
+        // This method does: WHERE token_hash = $1 AND revoked_at IS NULL
+        const storedToken = await refreshTokensRepository.findValidToken(
+          refresh_token, // 👈 Pass the plain token
+          client
+        );
+
+        if (!storedToken) {
+          throw new CustomError({
+            message: "Refresh token not found or expired",
+            statusCode: 401,
+          });
+        }
+
+        // 3) Revoke the old token (rotation)
+        await refreshTokensRepository.revokeToken(storedToken.id, client);
+
+        // 4) Generate new refresh token with unique JTI
+        const days = Number(REFRESH_TOKEN_EXP_DAYS) || 30;
+        const rawNewRefreshToken = jwt.sign(
+          {
+            sub: userId,
+            jti: crypto.randomBytes(16).toString("hex"),
+          },
+          process.env.JWT_REFRESH_SECRET,
+          { expiresIn: `${days}d` }
+        );
+
+        const newRtExpiresAt = new Date(
+          Date.now() + days * 24 * 60 * 60 * 1000
+        );
+
+        // 5) Store new plain token
+        await refreshTokensRepository.createRefreshToken(
+          userId,
+          rawNewRefreshToken, // 👈 Store plain token in token_hash column
+          newRtExpiresAt,
+          client
+        );
+
+        // 6) Generate new access token
+        const rawNewAccessToken = jwt.sign(
+          { sub: userId },
+          process.env.JWT_SECRET,
+          { expiresIn: ACCESS_TOKEN_EXP }
+        );
+
+        return {
+          newAccessToken: rawNewAccessToken,
+          newRefreshToken: rawNewRefreshToken,
+        };
+      }
+    );
+
+    return {
+      message: "Token refreshed successfully",
+      data: {
+        access_token: newAccessToken,
+        refresh_token: newRefreshToken,
+      },
+    };
+  }
+
+  async logout(req) {
+    const { refreshToken } = req.body;
+
+    await withTransaction(async (client) => {
+      // 1) Verify the refresh token JWT
       let payload;
       try {
-        payload = jwt.verify(refresh_token, process.env.JWT_REFRESH_SECRET);
+        payload = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
       } catch {
         throw new CustomError({
           message: "Invalid refresh token",
@@ -331,51 +408,26 @@ class UsersController {
         });
       }
 
-      const userId = payload.sub;
-
-      // find all valid refresh tokens for user
-      const validTokens = await refreshTokensRepository.findAllValidByUser(
-        userId,
+      const storedToken = await refreshTokensRepository.findValidToken(
+        refreshToken,
         client
       );
-      if (!validTokens || validTokens.length === 0) {
+
+      if (!storedToken) {
         throw new CustomError({
-          message: "Refresh token not found or expired",
-          statusCode: 401,
+          message: "Refresh token not found or already revoked",
+          statusCode: 404,
         });
       }
 
-      // match raw token against hashes
-      let matchedToken = null;
-      for (const t of validTokens) {
-        const match = await bcrypt.compare(refresh_token, t.token_hash);
-        if (match) {
-          matchedToken = t;
-          break;
-        }
-      }
-
-      if (!matchedToken) {
-        throw new CustomError({
-          message: "Invalid refresh token",
-          statusCode: 401,
-        });
-      }
-
-      // generate new access token
-      const newAccessToken = jwt.sign(
-        { sub: userId },
-        process.env.JWT_SECRET,
-        { expiresIn: ACCESS_TOKEN_EXP }
-      );
-
-      return { newAccessToken };
+      // 3) Revoke this specific token
+      await refreshTokensRepository.revokeToken(storedToken.id, client);
     });
 
     return {
-      message: "Token refreshed successfully",
+      message: "Logout successful",
       data: {
-        access_token: newAccessToken,
+        logged_out: true,
       },
     };
   }

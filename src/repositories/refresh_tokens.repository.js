@@ -27,7 +27,7 @@ class RefreshTokensRepository {
     return rows[0] || null;
   }
 
-  async revokeToken(id, client = pool) {
+  async revokeToken(id, client) {
     const query = {
       text: `
         UPDATE refresh_tokens
@@ -41,7 +41,7 @@ class RefreshTokensRepository {
     return rows[0] || null;
   }
 
-  async revokeAllForUser(user_id, client = pool) {
+  async revokeAllForUser(user_id, client) {
     const query = {
       text: `
         UPDATE refresh_tokens
