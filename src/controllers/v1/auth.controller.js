@@ -432,6 +432,37 @@ class UsersController {
     };
   }
 
+  async getCurrentUser(req) {
+    const userId = req.user?.sub;
+    if (!userId) {
+      throw new CustomError({
+        message: "Unauthorized",
+        statusCode: 401,
+      });
+    }
+
+    const user = await usersRepository.findById(userId);
+    if (!user) {
+      throw new CustomError({
+        message: "User not found",
+        statusCode: 404,
+      });
+    }
+
+    return {
+      message: "Current user fetched successfully",
+      data: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        avatar_url: user.avatar_url,
+        is_email_verified: user.is_email_verified,
+        created_at: user.created_at,
+        updated_at: user.updated_at,
+      },
+    };
+  }
+
   async deleteUser(req, res, next) {
     try {
       // TODO: implement delete user logic

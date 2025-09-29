@@ -5,8 +5,8 @@ exports.validate = (method) => {
     case 'send-coordinate': {
       return [
         body('client_id', 'client_id is required').exists().isString(),
-        body('latitude', 'latitude is required').exists().isString(),
-        body('longitude', 'longitude is required').exists().isString(),
+        body('latitude', 'latitude is required').exists().isFloat(),
+        body('longitude', 'longitude is required').exists().isFloat(),
       ];
     }
   }

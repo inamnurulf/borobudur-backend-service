@@ -4,6 +4,9 @@ const { sendMessage } = require("../../controllers/v1/coordinate.controller");
 const { validate } = require("../../validator/coordinate");
 const { validationResult } = require("express-validator");
 const { successResponse, failedResponse } = require("../../helpers/response");
+const coordinateController = require("../../controllers/v1/coordinate.controller");
+const logger = require("../../config/logger");
+const CustomError = require("../../helpers/customError");
 
 /**
  * @swagger
@@ -36,18 +39,23 @@ const { successResponse, failedResponse } = require("../../helpers/response");
  *         description: Internal server error
  */
 router.post("/", validate("send-coordinate"), async (req, res) => {
+  try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json(failedResponse({ errors: errors.array(), message: "Validation failed" }));
+      throw new CustomError({
+        message: "Validation failed",
+        statusCode: 400,
+        errors: errors.array(),
+      });
     }
-  
-    try {
-      const { latitude, longitude, client_id } = req.body;
-      const result = await sendMessage({ latitude, longitude, client_id });
-      res.status(200).json(successResponse({ message: result.message }));
-    } catch (err) {
-      res.status(500).json(failedResponse({ message: err.message }));
-    }
-  });
-  
+    const result = await coordinateController.sendCoordinate(req);
+    res
+      .status(200)
+      .json(successResponse({ message: "Article updated", data: result }));
+  } catch (err) {
+    logger.error("Error in sendingCoordinate:", err);
+    await failedResponse({ res, req, errors: err });
+  }
+});
+
 module.exports = router;

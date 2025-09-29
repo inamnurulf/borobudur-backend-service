@@ -206,7 +206,7 @@ router.get("/me", authenticate, async (req, res) => {
     const result = await authController.getCurrentUser(req, res);
     res
       .status(201)
-      .json(successResponse({ message: result.message, data: result.user }));
+      .json(successResponse({ message: result.message, data: result.data }));
   } catch (err) {
     logger.error("Error in getCurrentUser:", err);
     await failedResponse({ res, req, errors: err });
