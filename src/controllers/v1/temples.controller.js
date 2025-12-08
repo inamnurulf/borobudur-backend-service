@@ -29,7 +29,7 @@ class TemplesController {
           ...nodes.map((n) => ({
             type: "Feature",
             geometry: n.geom, // already JSON
-            properties: { id: n.id, name: n.name },
+            properties: { id: n.id, name: n.name, altitude_m: n.altitude_m, },
           })),
           ...edges.map((e) => ({
             type: "Feature",

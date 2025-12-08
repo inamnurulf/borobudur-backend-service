@@ -21,10 +21,13 @@ class TempleNodesRepository {
 
     const query = {
       text: `
-        SELECT id, name, ST_AsGeoJSON(geom)::json AS geom
-        FROM temple_nodes
-        ${whereClause}
-      `,
+            SELECT id,
+                  name,
+                  altitude_m,
+                  ST_AsGeoJSON(geom)::json AS geom
+            FROM temple_nodes
+            ${whereClause}
+          `,
       values,
     };
 
@@ -34,7 +37,13 @@ class TempleNodesRepository {
 
   async findById(id, client = pool) {
     const query = {
-      text: `SELECT id, name, ST_AsGeoJSON(geom)::json AS geom FROM temple_nodes WHERE id = $1 LIMIT 1`,
+      text: `SELECT id,
+              name,
+              altitude_m,
+              ST_AsGeoJSON(geom)::json AS geom
+       FROM temple_nodes
+       WHERE id = $1
+       LIMIT 1`,
       values: [id],
     };
     const { rows } = await client.query(query);

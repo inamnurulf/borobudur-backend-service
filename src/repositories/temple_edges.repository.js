@@ -130,7 +130,7 @@ class TempleEdgesRepository {
   async getNearestNodeInfo(lon, lat, client) {
     const sql = `
       WITH params AS (SELECT ST_SetSRID(ST_MakePoint($1,$2), 4326) AS pt)
-      SELECT n.id, n.name,
+      SELECT n.id, n.name, n.altitude_m,
              ST_X(n.geom) AS lon, ST_Y(n.geom) AS lat,
              ST_Distance(n.geom::geography, (SELECT pt FROM params)::geography) AS distance_m
       FROM temple_nodes n, params p
