@@ -26,8 +26,10 @@ const pool = require('./config/db.js'); // PostgreSQL connection
 // // Routes
 const exampleRoutes = require('./routes/example.route.js');
 const v1Routes = require('./routes/v1')
+const v2Routes = require('./routes/v2')
 app.use('/api/example', exampleRoutes);
 app.use("/v1", v1Routes)
+app.use("/v2", v2Routes);
 
 const { failedResponse } = require('./helpers/response.js');
 app.use((err, req, res, next) => {
