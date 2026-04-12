@@ -159,6 +159,78 @@ class TempleFeaturesRepository {
   };
 }
 
+  /**
+   * Find nearby features grouped by floor/zone.
+   * If floor is provided, search only on that floor.
+   * If floor is not provided, auto-detect by finding the nearest node.
+   *
+   * @param {number} lat - User latitude
+   * @param {number} lon - User longitude
+   * @param {object} options
+   * @param {number} [options.radius] - Search radius in meters
+   * @param {number} [options.floor] - Explicit floor (skip auto-detect)
+   * @param {object} [client=pool] - DB client
+   * @returns {Promise<{ floor_detected: number, data: Array }>}
+   */
+  async findNearbyGrouped(lat, lon, { radius, floor } = {}, client = pool) {
+    const userPoint = `ST_SetSRID(ST_MakePoint(${lon},${lat}),4326)`;
+    let detectedFloor = floor;
+
+    // Auto-detect floor from nearest node if not provided
+    if (!detectedFloor) {
+      const detectQuery = {
+        text: `
+          SELECT floor
+          FROM temple_nodes
+          WHERE floor IS NOT NULL
+          ORDER BY geom <-> ${userPoint}
+          LIMIT 1
+        `,
+      };
+      const detectResult = await client.query(detectQuery);
+
+      if (!detectResult.rows.length || detectResult.rows[0].floor === null) {
+        return { floor_detected: null, data: [] };
+      }
+
+      detectedFloor = detectResult.rows[0].floor;
+    }
+
+    // Build the features query with optional radius filter
+    const values = [detectedFloor, lon, lat];
+    let idx = 4;
+    let radiusCondition = "";
+
+    if (radius) {
+      radiusCondition = `AND ST_DWithin(n.geom::geography, ST_SetSRID(ST_MakePoint($2,$3),4326)::geography, $${idx++})`;
+      values.push(radius);
+    }
+
+    const query = {
+      text: `
+        SELECT f.id,
+               f.type,
+               f.name,
+               f.description,
+               f.image_url,
+               f.radius,
+               n.floor,
+               n.zone,
+               ST_AsGeoJSON(n.geom)::json AS geom,
+               ST_DistanceSphere(n.geom, ST_SetSRID(ST_MakePoint($2,$3),4326)) AS distance_m
+        FROM temple_features f
+        JOIN temple_nodes n ON f.node_id = n.id
+        WHERE n.floor = $1
+        ${radiusCondition}
+        ORDER BY distance_m
+      `,
+      values,
+    };
+
+    const { rows } = await client.query(query);
+    return { floor_detected: detectedFloor, data: rows };
+  }
+
 }
 
 module.exports = new TempleFeaturesRepository();
