@@ -275,6 +275,8 @@ class PoiRepository {
     const query = `
       SELECT
           poi.id,
+          nodes.name,
+          nodes.type,
           poi.description,
           poi.opening_hours,
           poi.contact_info,
@@ -282,6 +284,8 @@ class PoiRepository {
           poi.rating,
           poi.metadata,
           ST_AsGeoJSON(nodes.geom)::json as geometry,
+          ST_Y(nodes.geom) as latitude,
+          ST_X(nodes.geom) as longitude,
           ST_Distance(nodes.geom::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography) as distance_meters,
           ARRAY_AGG(DISTINCT pcm.category_id) FILTER (WHERE pcm.category_id IS NOT NULL) AS category_ids
       FROM
@@ -293,7 +297,7 @@ class PoiRepository {
       WHERE
           ST_DWithin(nodes.geom::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $3)
       GROUP BY
-          poi.id, nodes.geom
+          poi.id, nodes.geom, nodes.name, nodes.type
       ORDER BY
           distance_meters
       LIMIT $4;

@@ -137,6 +137,35 @@ exports.validate = (method) => {
       ];
     }
 
+    /**
+     * GET /v2/temples/features/nearby-grouped
+     */
+    case "getNearbyGrouped": {
+      return [
+        query("lat")
+          .exists().withMessage("lat is required")
+          .bail()
+          .isFloat({ min: -90, max: 90 })
+          .withMessage("lat must be between -90 and 90"),
+
+        query("lon")
+          .exists().withMessage("lon is required")
+          .bail()
+          .isFloat({ min: -180, max: 180 })
+          .withMessage("lon must be between -180 and 180"),
+
+        query("radius")
+          .optional()
+          .isFloat({ min: 0 })
+          .withMessage("radius must be >= 0"),
+
+        query("floor")
+          .optional()
+          .isInt({ min: 1 })
+          .withMessage("floor must be a positive integer"),
+      ];
+    }
+
     default:
       return [];
   }

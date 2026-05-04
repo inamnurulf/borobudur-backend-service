@@ -243,6 +243,73 @@ class TemplesControllerV2 {
 
     return route;
   }
+
+  /**
+   * Get nearby features grouped by floor and zone.
+   * If floor param is provided, search only on that floor.
+   * Otherwise, auto-detect floor from nearest node.
+   */
+  async getNearbyGrouped(req) {
+    const { lat, lon, radius, floor } = req.query;
+
+    if (!lat || !lon) {
+      throw new CustomError({ message: "lat and lon are required", statusCode: 400 });
+    }
+
+    const options = {};
+    if (radius) options.radius = parseFloat(radius);
+    if (floor) options.floor = parseInt(floor);
+
+    const result = await withTransaction(async (client) => {
+      return await featuresRepo.findNearbyGrouped(
+        parseFloat(lat),
+        parseFloat(lon),
+        options,
+        client
+      );
+    });
+
+    if (!result.floor_detected || result.data.length === 0) {
+      return { floor_detected: result.floor_detected, detected_areas: [] };
+    }
+
+    // Group features by zone
+    const zoneMap = new Map();
+    for (const row of result.data) {
+      const zone = row.zone || "Unknown";
+      if (!zoneMap.has(zone)) {
+        zoneMap.set(zone, []);
+      }
+      zoneMap.get(zone).push(row);
+    }
+
+    const floor_detected = result.floor_detected;
+    const detected_areas = [];
+
+    for (const [zone, features] of zoneMap) {
+      detected_areas.push({
+        zone_name: `Lantai ${floor_detected} ${zone}`,
+        features: features.map((f) => ({
+          id: f.id,
+          type: "Feature",
+          geometry: f.geom,
+          properties: {
+            label: f.name,
+            floor: floor_detected,
+            radius: f.radius,
+            distance_m: parseFloat(f.distance_m.toFixed(2)),
+            cultural_site: {
+              name: f.name,
+              description: f.description,
+              image_url: f.image_url || "",
+            },
+          },
+        })),
+      });
+    }
+
+    return { floor_detected, detected_areas };
+  }
 }
 
 module.exports = new TemplesControllerV2();

@@ -93,6 +93,45 @@ router.get("/features/nearest", validate("getNearestFeatures"), async (req, res)
 
 /**
  * @swagger
+ * /v2/temples/features/nearby-grouped:
+ *   get:
+ *     summary: Get nearby temple features grouped by floor and zone
+ *     tags: [Temples]
+ *     parameters:
+ *       - in: query
+ *         name: lat
+ *         required: true
+ *         schema: { type: number }
+ *       - in: query
+ *         name: lon
+ *         required: true
+ *         schema: { type: number }
+ *       - in: query
+ *         name: radius
+ *         schema: { type: number }
+ *       - in: query
+ *         name: floor
+ *         schema: { type: integer }
+ *     responses:
+ *       200:
+ *         description: Features grouped by detected floor and zone
+ */
+router.get("/features/nearby-grouped", validate("getNearbyGrouped"), async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      throw new CustomError({ message: "Validation failed", statusCode: 400, errors: errors.array() });
+    }
+    const result = await templesController.getNearbyGrouped(req);
+    res.status(200).json(successResponse({ message: "Nearby grouped features fetched", data: result }));
+  } catch (err) {
+    logger.error("Error in getNearbyGrouped:", err);
+    await failedResponse({ res, req, errors: err });
+  }
+});
+
+/**
+ * @swagger
  * /v1/temples/navigation/route:
  *   get:
  *     summary: Compute navigation route between two points or features
