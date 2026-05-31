@@ -1,6 +1,7 @@
 const nodesRepo = require("../../repositories/temple_nodes.repository");
 const edgesRepo = require("../../repositories/temple_edges.repository");
 const featuresRepo = require("../../repositories/temple_features.repository");
+const floorContoursRepo = require("../../repositories/temple_floor_contours.repository");
 
 const { withTransaction } = require("../../utils/db_transactions");
 const CustomError = require("../../helpers/customError");
@@ -309,6 +310,33 @@ class TemplesControllerV2 {
     }
 
     return { floor_detected, detected_areas };
+  }
+
+  async correctFloor(req) {
+    const { longitude, latitude, altitude } = req.body;
+
+    const result = await withTransaction(async (client) => {
+      return await floorContoursRepo.findByAltitudeAndClosestPoint(
+        longitude,
+        latitude,
+        altitude,
+        client
+      );
+    });
+
+    if (!result) {
+      throw new CustomError({
+        message: "No floor contour data available",
+        statusCode: 404,
+      });
+    }
+
+    return {
+      longitude: result.corrected_lon,
+      latitude: result.corrected_lat,
+      floor_level: result.floor,
+      corrected: !result.inside,
+    };
   }
 }
 

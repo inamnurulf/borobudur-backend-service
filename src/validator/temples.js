@@ -1,4 +1,4 @@
-const { query } = require("express-validator");
+const { query, body } = require("express-validator");
 
 exports.validate = (method) => {
   switch (method) {
@@ -163,6 +163,31 @@ exports.validate = (method) => {
           .optional()
           .isInt({ min: 1 })
           .withMessage("floor must be a positive integer"),
+      ];
+    }
+
+    /**
+     * POST /v2/temples/floor-correction
+     */
+    case "correctFloor": {
+      return [
+        body("longitude")
+          .exists().withMessage("longitude is required")
+          .bail()
+          .isFloat({ min: -180, max: 180 })
+          .withMessage("longitude must be between -180 and 180"),
+
+        body("latitude")
+          .exists().withMessage("latitude is required")
+          .bail()
+          .isFloat({ min: -90, max: 90 })
+          .withMessage("latitude must be between -90 and 90"),
+
+        body("altitude")
+          .exists().withMessage("altitude is required")
+          .bail()
+          .isFloat()
+          .withMessage("altitude must be a number"),
       ];
     }
 

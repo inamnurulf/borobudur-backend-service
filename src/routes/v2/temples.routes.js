@@ -151,4 +151,18 @@ router.get("/navigation/route", validate("getRoute"), async (req, res) => {
   }
 });
 
+router.post("/floor-correction", validate("correctFloor"), async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      throw new CustomError({ message: "Validation failed", statusCode: 400, errors: errors.array() });
+    }
+    const result = await templesController.correctFloor(req);
+    res.status(200).json(successResponse({ message: "Floor correction computed", data: result }));
+  } catch (err) {
+    logger.error("Error in correctFloor:", err);
+    await failedResponse({ res, req, errors: err });
+  }
+});
+
 module.exports = router;
