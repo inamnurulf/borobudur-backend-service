@@ -13,7 +13,7 @@ class CoordinatesController {
    * Returns: created record from Hyperbase
    */
   async sendCoordinate(req) {
-    const { client_id, latitude, longitude } = req.body;
+    const { client_id, latitude, longitude, floor, altitude_m } = req.body;
 
     // Minimal runtime guard (validator already covers most)
     if (!client_id || typeof latitude !== "number" || typeof longitude !== "number") {
@@ -44,6 +44,8 @@ class CoordinatesController {
       client_id,
       latitude,
       longitude,
+      floor: floor ?? null,
+      altitude_m: altitude_m ?? null,
     };
 
     try {
