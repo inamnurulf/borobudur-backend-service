@@ -16,7 +16,7 @@ class TempleEdgesRepository {
         .split(",")
         .map(Number);
       where.push(
-        `ST_Intersects(geom, ST_MakeEnvelope($${idx++}, $${idx++}, $${idx++}, $${idx++}, 4326))`
+        `ST_Intersects(geom, ST_MakeEnvelope($${idx++}, $${idx++}, $${idx++}, $${idx++}, 4326))`,
       );
       values.push(minLon, minLat, maxLon, maxLat);
     }
@@ -30,7 +30,7 @@ class TempleEdgesRepository {
 
     const query = {
       text: `
-        SELECT id, source, target, cost, reverse_cost,
+        SELECT id, source, target, cost, reverse_cost, is_stairs,
                ST_AsGeoJSON(geom)::json AS geom
         FROM temple_edges
         ${whereClause}
@@ -124,7 +124,9 @@ class TempleEdgesRepository {
       return parseInt(to.slice(5), 10);
     }
 
-    throw new Error("Invalid destination. Provide toFeaturesId or to=node:<id>/nodeId");
+    throw new Error(
+      "Invalid destination. Provide toFeaturesId or to=node:<id>/nodeId",
+    );
   }
 
   async getNearestNodeInfo(lon, lat, client) {
@@ -166,7 +168,7 @@ class TempleEdgesRepository {
       WITH route AS (
         SELECT *
         FROM pgr_dijkstra(
-          'SELECT id, source, target, cost, COALESCE(reverse_cost, cost) AS reverse_cost FROM temple_edges',
+          'SELECT id, source, target, CASE WHEN is_stairs THEN cost * 5 ELSE cost END AS cost, CASE WHEN is_stairs THEN COALESCE(reverse_cost, cost) * 5 ELSE COALESCE(reverse_cost, cost) END AS reverse_cost FROM temple_edges',
           $1::int, $2::int, true
         )
       ),
@@ -197,10 +199,13 @@ class TempleEdgesRepository {
 
   secondsFromMeters(m, profile) {
     const v =
-      profile === "walking" ? 1.35 :
-      profile === "wheelchair" ? 1.10 :
-      profile === "guided" ? 1.20 :
-      1.30;
+      profile === "walking"
+        ? 1.35
+        : profile === "wheelchair"
+          ? 1.1
+          : profile === "guided"
+            ? 1.2
+            : 1.3;
     return Math.round((m || 0) / v);
   }
 }

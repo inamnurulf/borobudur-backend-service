@@ -106,6 +106,7 @@ class TemplesControllerV2 {
             target: e.target,
             cost: e.cost,
             reverse_cost: e.reverse_cost,
+            is_stairs: e.is_stairs,
             type: e.type,
           },
         };
