@@ -44,7 +44,7 @@ class UsersController {
         avatar_url,
         hashedPassword,
         false,
-        client
+        client,
       );
 
       const role = await rolesRepository.findByName("user", client);
@@ -59,7 +59,7 @@ class UsersController {
         rawCode,
         "email_verification",
         expiresAt,
-        client
+        client,
       );
 
       return { user: newUser, code: rawCode };
@@ -123,7 +123,7 @@ class UsersController {
 
         const validPassword = await bcrypt.compare(
           password,
-          user.password_hash
+          user.password_hash,
         );
         if (!validPassword) {
           throw new CustomError({
@@ -152,11 +152,11 @@ class UsersController {
           process.env.JWT_REFRESH_SECRET,
           {
             expiresIn: `${REFRESH_TOKEN_EXP_DAYS}d`,
-          }
+          },
         );
 
         const expiresAt = new Date(
-          Date.now() + REFRESH_TOKEN_EXP_DAYS * 24 * 60 * 60 * 1000
+          Date.now() + REFRESH_TOKEN_EXP_DAYS * 24 * 60 * 60 * 1000,
         );
 
         // revoke all old tokens for user (optional cleanup)
@@ -167,11 +167,11 @@ class UsersController {
           user.id,
           rawRefreshToken, // 👈 Pass plain token, it goes into token_hash column
           expiresAt,
-          client
+          client,
         );
 
         return { user, accessToken, refreshToken: rawRefreshToken };
-      }
+      },
     );
 
     return {
@@ -210,7 +210,7 @@ class UsersController {
         await verificationCodeRepository.getValidCodeByUserAndPurpose(
           user.id,
           "email_verification",
-          client
+          client,
         );
 
       if (!verification) {
@@ -280,7 +280,7 @@ class UsersController {
         rawCode,
         "email_verification",
         expiresAt,
-        client
+        client,
       );
 
       return { user, code: rawCode };
@@ -334,7 +334,7 @@ class UsersController {
         // This method does: WHERE token_hash = $1 AND revoked_at IS NULL
         const storedToken = await refreshTokensRepository.findValidToken(
           refresh_token, // 👈 Pass the plain token
-          client
+          client,
         );
 
         if (!storedToken) {
@@ -355,11 +355,11 @@ class UsersController {
             jti: crypto.randomBytes(16).toString("hex"),
           },
           process.env.JWT_REFRESH_SECRET,
-          { expiresIn: `${days}d` }
+          { expiresIn: `${days}d` },
         );
 
         const newRtExpiresAt = new Date(
-          Date.now() + days * 24 * 60 * 60 * 1000
+          Date.now() + days * 24 * 60 * 60 * 1000,
         );
 
         // 5) Store new plain token
@@ -367,21 +367,21 @@ class UsersController {
           userId,
           rawNewRefreshToken, // 👈 Store plain token in token_hash column
           newRtExpiresAt,
-          client
+          client,
         );
 
         // 6) Generate new access token
         const rawNewAccessToken = jwt.sign(
           { sub: userId },
           process.env.JWT_SECRET,
-          { expiresIn: ACCESS_TOKEN_EXP }
+          { expiresIn: ACCESS_TOKEN_EXP },
         );
 
         return {
           newAccessToken: rawNewAccessToken,
           newRefreshToken: rawNewRefreshToken,
         };
-      }
+      },
     );
 
     return {
@@ -410,7 +410,7 @@ class UsersController {
 
       const storedToken = await refreshTokensRepository.findValidToken(
         refreshToken,
-        client
+        client,
       );
 
       if (!storedToken) {
@@ -459,6 +459,116 @@ class UsersController {
         is_email_verified: user.is_email_verified,
         created_at: user.created_at,
         updated_at: user.updated_at,
+      },
+    };
+  }
+
+  async forgotPassword(req) {
+    const { email } = req.body;
+
+    if (!email) {
+      throw new CustomError({
+        message: "email is required",
+        statusCode: 400,
+      });
+    }
+
+    const { user, code } = await withTransaction(async (client) => {
+      const user = await usersRepository.findByEmail(email, client);
+      if (!user) {
+        throw new CustomError({
+          message: "User not found",
+          statusCode: 404,
+        });
+      }
+
+      await verificationCodeRepository.deleteCodesByUser(user.id, client);
+
+      const rawCode = generateVerificationCode();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+      await verificationCodeRepository.createVerificationCode(
+        user.id,
+        rawCode,
+        "reset_password",
+        expiresAt,
+        client,
+      );
+
+      return { user, code: rawCode };
+    });
+
+    console.log(`Sending password reset code ${code} to ${email}`);
+
+    await emailService.sendResetPasswordMail({
+      to: email,
+      name: user.name,
+      code,
+    });
+
+    return {
+      message: "Password reset code sent.",
+      data: {
+        email,
+      },
+    };
+  }
+
+  async resetPassword(req) {
+    const { email, code, newPassword } = req.body;
+
+    if (!email || !code || !newPassword) {
+      throw new CustomError({
+        message: "email, code, and newPassword are required",
+        statusCode: 400,
+      });
+    }
+
+    await withTransaction(async (client) => {
+      const user = await usersRepository.findByEmail(email, client);
+      if (!user) {
+        throw new CustomError({
+          message: "User not found",
+          statusCode: 404,
+        });
+      }
+
+      const verification =
+        await verificationCodeRepository.getValidCodeByUserAndPurpose(
+          user.id,
+          "reset_password",
+          client,
+        );
+
+      if (!verification) {
+        throw new CustomError({
+          message: "Invalid or expired reset code",
+          statusCode: 400,
+        });
+      }
+
+      if (verification.code !== code) {
+        throw new CustomError({
+          message: "Invalid reset code",
+          statusCode: 400,
+        });
+      }
+
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+      await usersRepository.updateUser(
+        user.id,
+        { password_hash: hashedPassword },
+        client,
+      );
+
+      await verificationCodeRepository.markCodeAsUsed(verification.id, client);
+    });
+
+    return {
+      message: "Password reset successfully.",
+      data: {
+        email,
       },
     };
   }
