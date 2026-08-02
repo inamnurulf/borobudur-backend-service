@@ -22,6 +22,9 @@ app.use(morgan('dev'));
 const logger = require('./config/logger.js'); // Logger
 const pool = require('./config/db.js'); // PostgreSQL connection
 
+// Authentication middleware (applied globally with public route whitelist)
+const { conditionalAuth } = require('./middlewares/auth.middleware');
+app.use(conditionalAuth);
 
 // // Routes
 const exampleRoutes = require('./routes/example.route.js');

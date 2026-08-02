@@ -6,7 +6,6 @@ const { validationResult } = require("express-validator");
 const { successResponse, failedResponse } = require("../../helpers/response");
 const logger = require("../../config/logger");
 const CustomError = require("../../helpers/customError");
-const authenticate = require("../../middlewares/auth.middleware");
 
 /**
  * @swagger
@@ -36,7 +35,7 @@ const authenticate = require("../../middlewares/auth.middleware");
  *       200:
  *         description: Sequence of edges forming the shortest path
  */
-router.get("/path", authenticate, async (req, res) => {
+router.get("/path", async (req, res) => {
   try {
     const { source, target } = req.query;
     const result = await edgesController.getShortestPath({ source, target, user: req.user });
@@ -83,7 +82,7 @@ router.get("/", async (req, res) => {
  *       200:
  *         description: Edge detail
  */
-router.get("/:id", authenticate, async (req, res) => {
+router.get("/:id", async (req, res) => {
   try {
     const result = await edgesController.getEdgeById(req);
     res.status(200).json(successResponse({ message: "Edge detail fetched", data: result }));
@@ -175,7 +174,7 @@ router.post("/", validate("createEdge"), async (req, res) => {
  *       200:
  *         description: Edge updated
  */
-router.put("/:id", authenticate, validate("updateEdge"), async (req, res) => {
+router.put("/:id", validate("updateEdge"), async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -210,7 +209,7 @@ router.put("/:id", authenticate, validate("updateEdge"), async (req, res) => {
  *       200:
  *         description: Edge deleted
  */
-router.delete("/:id", authenticate, async (req, res) => {
+router.delete("/:id", async (req, res) => {
   try {
     const result = await edgesController.deleteEdge(req);
     res.status(200).json(successResponse({ message: "Edge deleted", data: result }));

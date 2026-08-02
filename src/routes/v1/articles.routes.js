@@ -8,7 +8,6 @@ const { validationResult } = require("express-validator");
 const { successResponse, failedResponse } = require("../../helpers/response");
 const logger = require("../../config/logger");
 const CustomError = require("../../helpers/customError");
-const authenticate = require("../../middlewares/auth.middleware");
 const upload = require("../../middlewares/multer.middleware");
 
 /**
@@ -131,7 +130,7 @@ router.get("/slug/:slug", async (req, res) => {
  *       200:
  *         description: Article detail
  */
-router.get("/:id", authenticate, async (req, res) => {
+router.get("/:id", async (req, res) => {
   try {
     const result = await articlesController.getArticleById(req);
     res
@@ -198,7 +197,6 @@ router.get("/:id", authenticate, async (req, res) => {
  */
 router.post(
   "/",
-  authenticate,
   ...upload.uploadSingle("headerImage"),
   validate("createArticle"),
   async (req, res) => {
@@ -277,7 +275,6 @@ router.post(
  */
 router.put(
   "/:id",
-  authenticate,
   ...upload.uploadSingle("headerImage"),
   validate("updateArticle"),
   async (req, res) => {
@@ -346,7 +343,7 @@ router.patch("/:id/views", async (req, res) => {
  *       200:
  *         description: Article deleted
  */
-router.delete("/:id", authenticate, async (req, res) => {
+router.delete("/:id", async (req, res) => {
   try {
     const result = await articlesController.deleteArticle(req);
     res

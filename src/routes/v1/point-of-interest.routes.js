@@ -6,7 +6,6 @@ const { validationResult } = require("express-validator");
 const { successResponse, failedResponse } = require("../../helpers/response");
 const logger = require("../../config/logger");
 const CustomError = require("../../helpers/customError");
-const authenticate = require("../../middlewares/auth.middleware");
 
 /**
  * @swagger
@@ -37,7 +36,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.post("/", authenticate, validate("createPOI"), async (req, res) => {
+router.post("/", validate("createPOI"), async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -125,7 +124,6 @@ router.get("/nearby", validate("getNearbyPOIs"), async (req, res) => {
  */
 router.get(
   "/:poiId/route",
-  authenticate,
   validate("routeToPOI"),
   async (req, res) => {
     try {
@@ -170,7 +168,7 @@ router.get("/:id", validate("getPOIById"), async (req, res) => {
   }
 });
 
-router.put("/:id", authenticate, validate("updatePOI"), async (req, res) => {
+router.put("/:id", validate("updatePOI"), async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -192,7 +190,7 @@ router.put("/:id", authenticate, validate("updatePOI"), async (req, res) => {
   }
 });
 
-router.delete("/:id", authenticate, validate("deletePOI"), async (req, res) => {
+router.delete("/:id", validate("deletePOI"), async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {

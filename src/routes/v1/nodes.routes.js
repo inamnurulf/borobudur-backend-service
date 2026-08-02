@@ -6,7 +6,6 @@ const { validationResult } = require("express-validator");
 const { successResponse, failedResponse } = require("../../helpers/response");
 const logger = require("../../config/logger");
 const CustomError = require("../../helpers/customError");
-const authenticate = require("../../middlewares/auth.middleware");
 
 /**
  * @swagger
@@ -51,7 +50,7 @@ router.get("/", async (req, res) => {
  *       200:
  *         description: Node detail
  */
-router.get("/:id", authenticate, async (req, res) => {
+router.get("/:id", async (req, res) => {
   try {
     const result = await nodesController.getNodeById(req);
     res.status(200).json(successResponse({ message: "Node detail fetched", data: result }));
@@ -142,7 +141,7 @@ router.post("/",  validate("createNode"), async (req, res) => {
  *       200:
  *         description: Node updated
  */
-router.put("/:id", authenticate, validate("updateNode"), async (req, res) => {
+router.put("/:id", validate("updateNode"), async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -177,7 +176,7 @@ router.put("/:id", authenticate, validate("updateNode"), async (req, res) => {
  *       200:
  *         description: Node deleted
  */
-router.delete("/:id", authenticate, async (req, res) => {
+router.delete("/:id", async (req, res) => {
   try {
     const result = await nodesController.deleteNode(req);
     res.status(200).json(successResponse({ message: "Node deleted", data: result }));

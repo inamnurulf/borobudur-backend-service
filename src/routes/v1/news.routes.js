@@ -6,7 +6,6 @@ const { validationResult } = require("express-validator");
 const { successResponse, failedResponse } = require("../../helpers/response");
 const logger = require("../../config/logger");
 const CustomError = require("../../helpers/customError");
-const authenticate = require("../../middlewares/auth.middleware");
 const upload = require('../../middlewares/multer.middleware'); 
 
 /**
@@ -103,7 +102,7 @@ router.get("/slug/:slug", async (req, res) => {
  *       200:
  *         description: News detail
  */
-router.get("/:id", authenticate, async (req, res) => {
+router.get("/:id", async (req, res) => {
   try {
     const result = await newsController.getNewsById(req);
     res.status(200).json(successResponse({ message: "News detail fetched", data: result }));
@@ -161,7 +160,7 @@ router.get("/:id", authenticate, async (req, res) => {
  *       201:
  *         description: News created successfully
  */
-router.post("/", authenticate, ...upload.uploadSingle('headerImage'), validate("createNews"), async (req, res) => {
+router.post("/", ...upload.uploadSingle('headerImage'), validate("createNews"), async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -228,7 +227,7 @@ router.post("/", authenticate, ...upload.uploadSingle('headerImage'), validate("
  *       200:
  *         description: News updated
  */
-router.put("/:id", authenticate,...upload.uploadSingle("headerImage"), validate("updateNews"), async (req, res) => {
+router.put("/:id", ...upload.uploadSingle("headerImage"), validate("updateNews"), async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -289,7 +288,7 @@ router.patch("/:id/views", async (req, res) => {
  *       200:
  *         description: News deleted
  */
-router.delete("/:id", authenticate, async (req, res) => {
+router.delete("/:id", async (req, res) => {
   try {
     const result = await newsController.deleteNews(req);
     res.status(200).json(successResponse({ message: "News deleted", data: result }));
