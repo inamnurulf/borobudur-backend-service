@@ -205,7 +205,7 @@ class TemplesControllerV2 {
    * Compute navigation route (ensure route GeoJSON becomes 3D too)
    * Assumes edgesRepo.findRoute returns a GeoJSON Feature/FeatureCollection or something similar.
    */
-  async getRoute(req) {
+  async getRoute3d(req) {
     const { fromLat, fromLon, toNodeId, profile } = req.query;
 
     if (!fromLat || !fromLon || !toNodeId) {
@@ -229,8 +229,6 @@ class TemplesControllerV2 {
       throw new CustomError({ message: "Route not found", statusCode: 404 });
     }
 
-    // If your route already includes Z from SQL, this won't break it.
-    // If not, and you want true Z, you’ll need the SQL to output 3D (ST_Force3D / add z values).
     if (route.type === "Feature") {
       return { ...route, geometry: to3DGeometry(route.geometry) };
     }
@@ -241,6 +239,34 @@ class TemplesControllerV2 {
           ft?.geometry ? { ...ft, geometry: to3DGeometry(ft.geometry) } : ft
         ),
       };
+    }
+
+    return route;
+  }
+
+  async getRoute(req) {
+    const { fromLat, fromLon, toLat, toLon, profile } = req.query;
+
+    if (!fromLat || !fromLon || !toLat || !toLon) {
+      throw new CustomError({
+        message: "fromLat, fromLon, toLat, and toLon are required",
+        statusCode: 400,
+      });
+    }
+
+    const route = await withTransaction(async (client) => {
+      return await edgesRepo.findRouteFloorAware(
+        parseFloat(fromLon),
+        parseFloat(fromLat),
+        parseFloat(toLon),
+        parseFloat(toLat),
+        profile || "walking",
+        client
+      );
+    });
+
+    if (!route || route.error) {
+      throw new CustomError({ message: route?.error || "Route not found", statusCode: 404 });
     }
 
     return route;

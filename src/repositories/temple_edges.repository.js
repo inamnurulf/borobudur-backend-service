@@ -129,22 +129,32 @@ class TempleEdgesRepository {
     );
   }
 
-  async getNearestNodeInfo(lon, lat, client) {
+  async detectFloor(lon, lat, client) {
+    const sql = `
+      SELECT floor FROM temple_floor_contours
+      WHERE ST_Contains(geom, ST_SetSRID(ST_MakePoint($1, $2), 4326))
+      LIMIT 1
+    `;
+    const { rows } = await client.query(sql, [lon, lat]);
+    return rows.length ? rows[0].floor : null;
+  }
+
+  async getNearestNodeInfo(lon, lat, client, floor = null) {
     const sql = `
       WITH params AS (SELECT ST_SetSRID(ST_MakePoint($1,$2), 4326) AS pt)
       SELECT n.id, n.name, n.altitude_m,
              ST_X(n.geom) AS lon, ST_Y(n.geom) AS lat,
              ST_Distance(n.geom::geography, (SELECT pt FROM params)::geography) AS distance_m
       FROM temple_nodes n, params p
+      WHERE ($3::int IS NULL OR n.floor = $3::int)
       ORDER BY n.geom <-> p.pt
       LIMIT 1
     `;
-    const { rows } = await client.query(sql, [lon, lat]);
-    if (!rows.length) throw new Error("No nodes near the given coordinate");
-    return rows[0];
+    const { rows } = await client.query(sql, [lon, lat, floor]);
+    return rows[0] || null;
   }
 
-  async getNearestEntryNodeInfo(lon, lat, client) {
+  async getNearestEntryNodeInfo(lon, lat, client, floor = null) {
     const sql = `
       WITH params AS (SELECT ST_SetSRID(ST_MakePoint($1,$2), 4326) AS pt)
       SELECT n.id, n.name,
@@ -152,6 +162,7 @@ class TempleEdgesRepository {
              ST_Distance(n.geom::geography, (SELECT pt FROM params)::geography) AS distance_m
       FROM temple_nodes n, params p
       WHERE n.name ~* $3
+        AND ($4::int IS NULL OR n.floor = $4::int)
       ORDER BY n.geom <-> p.pt
       LIMIT 1
     `;
@@ -159,6 +170,7 @@ class TempleEdgesRepository {
       lon,
       lat,
       TempleEdgesRepository.ENTRY_NAME_PATTERN_SQL,
+      floor,
     ]);
     return rows[0] || null;
   }
@@ -195,6 +207,53 @@ class TempleEdgesRepository {
     `;
     const { rows } = await client.query(sql, [fromNodeId, toNodeId]);
     return rows[0] || null;
+  }
+
+  async findRouteFloorAware(fromLon, fromLat, toLon, toLat, profile, client) {
+    const startInfo = await this.resolveNodeWithFloor(fromLon, fromLat, client);
+    const endInfo = await this.resolveNodeWithFloor(toLon, toLat, client);
+
+    const row = await this.routeFromNodeToNode(startInfo.id, endInfo.id, client);
+    if (!row || !row.geometry) return { error: "No path found" };
+
+    const distance_m = Number(row.distance_m) || 0;
+    const duration_s = this.secondsFromMeters(distance_m, profile);
+
+    return {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          geometry: row.geometry,
+          properties: {
+            distance_m,
+            duration_s,
+            profile,
+            segments: row.segments || [],
+          },
+        },
+      ],
+    };
+  }
+
+  async resolveNodeWithFloor(lon, lat, client) {
+    const floor = await this.detectFloor(lon, lat, client);
+
+    const nearest = await this.getNearestNodeInfo(lon, lat, client, floor);
+    if (nearest && nearest.distance_m <= TempleEdgesRepository.ENTRY_DISTANCE_THRESHOLD_M) {
+      return nearest;
+    }
+    if (nearest) {
+      const entry = await this.getNearestEntryNodeInfo(lon, lat, client, floor);
+      if (entry) return entry;
+    }
+
+    const nearestFallback = await this.getNearestNodeInfo(lon, lat, client);
+    if (nearestFallback.distance_m > TempleEdgesRepository.ENTRY_DISTANCE_THRESHOLD_M) {
+      const entryFallback = await this.getNearestEntryNodeInfo(lon, lat, client);
+      return entryFallback || nearestFallback;
+    }
+    return nearestFallback;
   }
 
   secondsFromMeters(m, profile) {

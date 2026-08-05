@@ -104,8 +104,9 @@ exports.validate = (method) => {
 
     /**
      * GET /v1/temples/navigation/route
+     * GET /v2/temples/navigation/route-3d
      */
-    case "getRoute": {
+    case "getRoute3d": {
       return [
         query("fromLat")
           .exists().withMessage("fromLat is required")
@@ -134,6 +135,42 @@ exports.validate = (method) => {
           .optional()
           .isInt({ min: 0, max: 3 })
           .withMessage("alternatives must be between 0 and 3"),
+      ];
+    }
+
+    /**
+     * GET /v2/temples/navigation/route (floor-aware)
+     */
+    case "getRoute": {
+      return [
+        query("fromLat")
+          .exists().withMessage("fromLat is required")
+          .bail()
+          .isFloat({ min: -90, max: 90 })
+          .withMessage("fromLat must be between -90 and 90"),
+
+        query("fromLon")
+          .exists().withMessage("fromLon is required")
+          .bail()
+          .isFloat({ min: -180, max: 180 })
+          .withMessage("fromLon must be between -180 and 180"),
+
+        query("toLat")
+          .exists().withMessage("toLat is required")
+          .bail()
+          .isFloat({ min: -90, max: 90 })
+          .withMessage("toLat must be between -90 and 90"),
+
+        query("toLon")
+          .exists().withMessage("toLon is required")
+          .bail()
+          .isFloat({ min: -180, max: 180 })
+          .withMessage("toLon must be between -180 and 180"),
+
+        query("profile")
+          .optional()
+          .isIn(["walking", "accessible"])
+          .withMessage("profile must be walking or accessible"),
       ];
     }
 

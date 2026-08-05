@@ -137,6 +137,20 @@ router.get("/features/nearby-grouped", validate("getNearbyGrouped"), async (req,
  *     summary: Compute navigation route between two points or features
  *     tags: [Temples]
  */
+router.get("/navigation/route-3d", validate("getRoute3d"), async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      throw new CustomError({ message: "Validation failed", statusCode: 400, errors: errors.array() });
+    }
+    const result = await templesController.getRoute3d(req);
+    res.status(200).json(successResponse({ message: "Route computed", data: result }));
+  } catch (err) {
+    logger.error("Error in getRoute3d:", err);
+    await failedResponse({ res, req, errors: err });
+  }
+});
+
 router.get("/navigation/route", validate("getRoute"), async (req, res) => {
   try {
     const errors = validationResult(req);

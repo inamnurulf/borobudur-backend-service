@@ -98,7 +98,7 @@ router.get("/features/nearest", validate("getNearestFeatures"), async (req, res)
  *     summary: Compute navigation route between two points or features
  *     tags: [Temples]
  */
-router.get("/navigation/route", validate("getRoute"), async (req, res) => {
+router.get("/navigation/route", validate("getRoute3d"), async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
