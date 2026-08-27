@@ -1,32 +1,81 @@
-# Backend Service Documentation
+# Borobudur Backend Service
 
-## Overview
-
-This project is a comprehensive Node.js backend service built using Express, providing a modular REST API architecture with controllers, routes, helpers, and utilities. It supports multiple domain modules including authentication, news, articles, nodes, events, coordinates, providers, edges, and points of interest.
-
-The system follows a layered architecture and uses various middleware tools such as Multer for file uploads and custom error handling.
+Backend service untuk ekosistem **Smart Tourism Borobudur**. Menyediakan REST API modular (v1 dan v2) berbasis Express.js yang melayani aplikasi mobile Borobudur untuk kebutuhan autentikasi, konten heritage (news, articles, events), point of interest, model spasial candi, navigasi multi-level, dan pengumpulan data pengunjung.
 
 ---
 
-## Features
+## Architecture Overview
 
-* Modular REST API (v1) architecture
-* Authentication (JWT)
-* CRUD operations for multiple domain entities
-* File upload support (Multer)
-* Centralized error handling
-* Hyperbase integration utilities
-* Helper utilities for responses and verification codes
+Backend ini berada di antara aplikasi mobile Borobudur dan dua sumber data: PostgreSQL (data aplikasi) serta Hyperbase dan MQTT (data pengunjung/IoT).
+
+```
+Borobudur Mobile App
+        |
+        v
+REST API (/v1, /v2)
+        |
+        v
+Borobudur Backend Service
+        |
+        +-- Authentication
+        +-- Heritage Content / POI
+        +-- Temple Spatial Model
+        +-- Navigation
+        +-- Visitor Data
+        |
+        +----------+----------------+
+        |                           |
+        v                           v
+   PostgreSQL                Hyperbase + MQTT
+ application DB           visitor / IoT data
+```
+
+### Fungsi Backend
+
+- **Autentikasi** — registrasi, login, verifikasi (JWT access token + refresh token).
+- **Konten Heritage** — CRUD news, articles, events, dan point of interest.
+- **Temple Spatial Model** — graph nodes/edges candi, features, dan floor contours (GeoJSON).
+- **Navigasi** — shortest path multi-level antar node/POI (termasuk transisi tangga antar lantai).
+- **Visitor Data** — menerima data koordinat pengunjung, mengirimnya ke Hyperbase dan broker MQTT.
+
+### Komponen Utama
+
+| Lapisan        | Lokasi          | Fungsi                                                        |
+| -------------- | --------------- | ------------------------------------------------------------- |
+| Routes         | `src/routes`    | Definisi endpoint HTTP untuk `/v1` dan `/v2`                  |
+| Controllers    | `src/controllers` | Orkestrasi request/response per modul                         |
+| Repositories   | `src/repositories` | Akses data PostgreSQL (pg Pool)                              |
+| Middlewares    | `src/middlewares` | Auth kondisional, upload file (multer)                        |
+| Validators     | `src/validator` | Validasi input (express-validator)                            |
+| Services       | `src/services`  | Logika bisnis lintas modul (mis. upload gambar ke Hyperbase)  |
+| Config         | `src/config`    | Koneksi DB, logger, nodemailer, swagger                       |
+| Worker         | `src/worker`    | Background task (login & refresh token Hyperbase)             |
+| Utils          | `src/utils`     | Transaksi DB, klien MQTT (publish ke broker)                  |
+
+### Integrasi Eksternal
+
+- **PostgreSQL** — database aplikasi (users, konten, model spasial candi).
+- **Hyperbase** — penyimpanan data pengunjung/IoT dan bucket gambar, diakses via REST API (autentikasi token).
+- **MQTT** — publish payload data ke broker MQTT (lihat `src/utils/hyperbase.js`).
+
+### Status Fitur
+
+- **Implemented** — Authentication, content CRUD (news/articles/events/POI), temple spatial graph & features, navigation route, nearby POI, visitor data ke Hyperbase/MQTT.
+- **Experimental** — floor correction (`/v2/temples/floor-correction`).
+- **Planned** — unit & integration tests, caching (Redis), health check endpoint yang dedicated.
 
 ---
 
 ## Tech Stack
 
-* **Node.js**
-* **Express.js**
-* **Multer** (file uploading)
-* **JSON Web Token** (authentication)
-* **Custom Error Handler**
+- **Node.js** (20+)
+- **Express.js**
+- **PostgreSQL** (`pg`)
+- **Hyperbase** (REST API) & **MQTT** (`mqtt`)
+- **JSON Web Token** (`jsonwebtoken`) & **bcrypt** (autentikasi)
+- **Multer** & **Sharp** (upload & olah gambar)
+- **Swagger** (`swagger-jsdoc`, `swagger-ui-express`)
+- **Winston** (logger), **Nodemailer** (email verifikasi), **Helmet**, **CORS**, **Morgan**
 
 ---
 
@@ -34,49 +83,49 @@ The system follows a layered architecture and uses various middleware tools such
 
 ```
 src/
+├── server.js                     # Entry point aplikasi
+├── config/
+│   ├── db.js                     # Koneksi PostgreSQL
+│   ├── logger.js                 # Logger (Winston)
+│   ├── nodemailer.js             # Pengiriman email
+│   └── swagger.js                # Setup Swagger UI (/api-docs)
 ├── controllers/
-│   ├── example.controller.js
-│   └── v1/
-│       ├── articles.controller.js
-│       ├── auth.controller.js
-│       ├── coordinate.controller.js
-│       ├── edges.controller.js
-│       ├── events.controller.js
-│       ├── news.controller.js
-│       ├── nodes.controller.js
+│   ├── v1/                       # Controller untuk API v1
+│   │   ├── auth.controller.js
+│   │   ├── news.controller.js
+│   │   ├── articles.controller.js
+│   │   ├── events.controller.js
+│   │   ├── coordinate.controller.js
+│   │   ├── nodes.controller.js
+│   │   ├── edges.controller.js
+│   │   ├── point_of_interest.controller.js
+│   │   ├── provider.controller.js
+│   │   └── temples.controller.js
+│   └── v2/                       # Controller untuk API v2 (spatial/navigation)
 │       ├── point_of_interest.controller.js
-│       ├── provider.controller.js
 │       └── temples.controller.js
-│
-├── helpers/
-│   ├── customError.js
-│   ├── generateVerificationCode.js
-│   ├── multer.js
-│   └── response.js
-│
 ├── routes/
-│   ├── example.route.js
-│   └── v1/
-│       ├── auth.routes.js
-│       ├── coordinate.routes.js
-│       ├── events.routes.js
-│       ├── index.js
-│       ├── news.routes.js
-│       ├── nodes.routes.js
-│       ├── provider.routes.js
-│       └── edges.routes.js
-│       └── point_of_interest.routes.js
-│       └── temples.routes.js
-│
-├── utils/
-│   └── hyperbase.js
-│
-└── app.js
+│   ├── v1/                       # Route untuk /v1
+│   └── v2/                       # Route untuk /v2
+├── repositories/                 # Akses data PostgreSQL
+├── middlewares/                  # Auth & multer middleware
+├── validator/                    # Validasi input
+├── services/                     # Logika bisnis lintas modul
+├── worker/                       # Background task (Hyperbase auth)
+└── utils/                        # Transaksi DB & MQTT client
 ```
 
 ---
 
-## Installation
+## Quick Start
+
+### Prasyarat
+
+- **Node.js** 20 atau lebih baru
+- **npm**
+- **PostgreSQL** yang berjalan
+
+### 1. Clone & Install
 
 ```bash
 git clone https://github.com/inamnurulf/borobudur-backend-service
@@ -84,183 +133,79 @@ cd borobudur-backend-service
 npm install
 ```
 
----
+### 2. Konfigurasi Environment
 
-## Environment Variables
-
-Create a `.env` file and include environment variables such as:
-
-```
-PORT=3000
-JWT_SECRET=your_secret_key
-DB_HOST=...
-DB_USER=...
-DB_PASSWORD=...
+```bash
+cp .env.example .env
 ```
 
----
+Isi `.env` sesuai environment Anda. Variabel utama:
 
-## Running the Server
+| Variable                 | Fungsi                                  |
+| ------------------------ | --------------------------------------- |
+| `DATABASE_URL`           | Connection string PostgreSQL            |
+| `DB_HOST` / `DB_PORT` / `DB_USER` / `DB_PASSWORD` / `DB_NAME` | Koneksi PostgreSQL per bagian |
+| `DB_SSL`                 | Set `true` jika koneksi butuh SSL       |
+| `PORT`                   | Port server (default `3001`)            |
+| `SWAGGER_SERVER_URL`     | Base URL untuk Swagger                  |
+| `HYPERBASE_HOST`         | Base URL Hyperbase                      |
+| `HYPERBASE_EMAIL` / `HYPERBASE_PASSWORD` | Kredensial login Hyperbase |
+| `HYPERBASE_PROJECT_ID` / `HYPERBASE_COLLECTION_ID` | Target project & collection Hyperbase |
+| `HYPERBASE_BUCKET_ID`    | Bucket gambar Hyperbase                 |
+| `MQTT_BROKER_URL`        | URL broker MQTT                         |
+| `MQTT_TOPIC`             | Topic publish MQTT                      |
 
-### Development Mode
+> Catatan: variabel `HYPERBASE_HOST`, `HYPERBASE_EMAIL`, `HYPERBASE_PASSWORD`, dan `HYPERBASE_BUCKET_ID` digunakan oleh kode tetapi belum ada di `.env.example` — tambahkan secara manual.
 
+### 3. Siapkan Database
+
+Buat database PostgreSQL lalu jalankan migration secara berurutan:
+
+```bash
+psql "$DATABASE_URL" -f migrations/001_nearby_features_schema.sql
+psql "$DATABASE_URL" -f migrations/002_seed_poi_facilities.sql
+psql "$DATABASE_URL" -f migrations/003_seed_temple_nodes_floor.sql
+psql "$DATABASE_URL" -f migrations/004_create_temple_floor_contours.sql
+psql "$DATABASE_URL" -f migrations/005_add_is_stairs_to_temple_edges.sql
 ```
+
+### 4. Jalankan Server
+
+**Development** (auto-reload):
+
+```bash
 npm run dev
 ```
 
-### Production
+**Production**:
 
+```bash
+node src/server.js
 ```
-npm start
+
+Server berjalan di `http://localhost:3001` (atau sesuai `PORT`).
+
+### 5. Docker
+
+```bash
+docker build -t borobudur-backend .
+docker run --env-file .env -p 3001:3000 borobudur-backend
 ```
+
+> Catatan: Dockerfile mengekspos port `3000`, sedangkan aplikasi default ke `3001`. Sesuaikan `PORT` di `.env` atau mapping port sesuai kebutuhan.
+
+### 6. Verifikasi
+
+- Buka Swagger UI di `http://localhost:3001/api-docs` untuk daftar endpoint.
+- Cek endpoint sederhana, mis. `GET /v1/news` atau `GET /v1/temples/graph`.
 
 ---
 
-## System Architecture
+## API Routes
 
-```
-Client → Express REST API → Controllers → Services/Helpers → Database/Hyperbase
-```
+API tersedia dalam dua versi yang di-mount sebagai berikut:
 
----
+- **v1** (`/v1`) — autentikasi, konten (news/articles/events), point-of-interest, nodes, edges, coordinate, provider, dan temples.
+- **v2** (`/v2`) — point-of-interest dan temples (model spasial/navigasi), meliputi `temples/features/nearby-grouped`, `temples/navigation/route-3d`, dan `temples/floor-correction`.
 
-## API Routes (v1)
-
-Below is a consolidated list of available API endpoints.
-
-### Authentication
-
-| Method | Endpoint              | Description   |
-| ------ | --------------------- | ------------- |
-| POST   | /api/v1/auth/login    | Login user    |
-| POST   | /api/v1/auth/register | Register user |
-| POST   | /api/v1/auth/verify   | Verify user   |
-
-### News
-
-| Method | Endpoint         |
-| ------ | ---------------- |
-| GET    | /api/v1/news     |
-| POST   | /api/v1/news     |
-| GET    | /api/v1/news/:id |
-| PUT    | /api/v1/news/:id |
-| DELETE | /api/v1/news/:id |
-
-### Articles
-
-| Method | Endpoint             |
-| ------ | -------------------- |
-| GET    | /api/v1/articles     |
-| POST   | /api/v1/articles     |
-| GET    | /api/v1/articles/:id |
-| PUT    | /api/v1/articles/:id |
-| DELETE | /api/v1/articles/:id |
-
-### Nodes
-
-| Method | Endpoint          |
-| ------ | ----------------- |
-| GET    | /api/v1/nodes     |
-| POST   | /api/v1/nodes     |
-| GET    | /api/v1/nodes/:id |
-| PUT    | /api/v1/nodes/:id |
-| DELETE | /api/v1/nodes/:id |
-
-### Coordinates
-
-| Method | Endpoint            |
-| ------ | ------------------- |
-| GET    | /api/v1/coordinates |
-| POST   | /api/v1/coordinates |
-
-### Providers
-
-| Method | Endpoint          |
-| ------ | ----------------- |
-| GET    | /api/v1/providers |
-| POST   | /api/v1/providers |
-
-### Events
-
-| Method | Endpoint       |
-| ------ | -------------- |
-| GET    | /api/v1/events |
-| POST   | /api/v1/events |
-
-### Edges
-
-| Method | Endpoint          |
-| ------ | ----------------- |
-| GET    | /api/v1/edges     |
-| POST   | /api/v1/edges     |
-| GET    | /api/v1/edges/:id |
-
-### Point of Interest
-
-| Method | Endpoint        |
-| ------ | --------------- |
-| GET    | /api/v1/poi     |
-| POST   | /api/v1/poi     |
-| GET    | /api/v1/poi/:id |
-
-### Temples
-
-| Method | Endpoint            |
-| ------ | ------------------- |
-| GET    | /api/v1/temples     |
-| POST   | /api/v1/temples     |
-| GET    | /api/v1/temples/:id |
-
----
-
-## Error Handling
-
-This project uses **customError.js** to standardize API error outputs.
-
-Example output:
-
-```json
-{
-  "status": "error",
-  "message": "Invalid token"
-}
-```
-
----
-
-## File Uploads
-
-Multer is configured in `helpers/multer.js`.
-
-Usage example:
-
-```javascript
-upload.single("image")
-```
-
----
-
-## Utilities
-
-### Hyperbase Integration
-
-Located in:
-
-```
-src/utils/hyperbase.js
-```
-
-Handles communication with Hyperbase backend services.
-
----
-
-## Future Improvements
-
-* Add Swagger API documentation
-* Add unit & integration tests
-* Add Docker deployment
-* Implement caching layer (Redis)
-
----
-
-
+Untuk daftar endpoint lengkap beserta request/response, lihat Swagger UI di `/api-docs`.
