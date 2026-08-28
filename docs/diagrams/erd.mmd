@@ -1,0 +1,205 @@
+erDiagram
+    USERS ||--o{ REFRESH_TOKENS : "has"
+    USERS ||--o{ VERIFICATION_CODES : "has"
+    USERS ||--o{ USER_PROVIDERS : "has"
+    USERS ||--o{ USER_ROLES : "assigned"
+    ROLES ||--o{ USER_ROLES : "assigned"
+
+    NODES ||--o{ EDGES : "source"
+    NODES ||--o{ EDGES : "target"
+    NODES ||--o{ POINTS_OF_INTEREST : "located_at"
+
+    POINTS_OF_INTEREST ||--o{ POI_CATEGORY_MAPPING : "mapped"
+    POI_CATEGORIES ||--o{ POI_CATEGORY_MAPPING : "mapped"
+
+    TEMPLE_NODES ||--o{ TEMPLE_EDGES : "source"
+    TEMPLE_NODES ||--o{ TEMPLE_EDGES : "target"
+    TEMPLE_NODES ||--o{ TEMPLE_FEATURES : "hosts"
+
+    USERS {
+        uuid id PK
+        varchar email UK
+        varchar name
+        text avatar_url
+        text password_hash
+        boolean is_email_verified
+        timestamptz last_login_at
+        timestamptz deleted_at
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    ROLES {
+        bigint id PK
+        varchar name UK
+        timestamptz deleted_at
+    }
+
+    USER_ROLES {
+        uuid user_id PK "FK -> users"
+        bigint role_id PK "FK -> roles"
+    }
+
+    REFRESH_TOKENS {
+        bigint id PK
+        uuid user_id FK "FK -> users"
+        text token_hash
+        timestamptz expires_at
+        timestamptz revoked_at
+        timestamptz created_at
+    }
+
+    VERIFICATION_CODES {
+        bigint id PK
+        uuid user_id FK "FK -> users"
+        varchar code
+        varchar purpose
+        timestamptz expires_at
+        timestamptz used_at
+        timestamptz created_at
+    }
+
+    USER_PROVIDERS {
+        bigint id PK
+        uuid user_id FK "FK -> users"
+        varchar provider
+        varchar provider_user_id UK
+        text refresh_token
+        text scope
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    NEWS {
+        int id PK
+        varchar title
+        text content
+        date publication_date
+        text image_url
+        text thumbnail_image_url
+        varchar slug UK
+        varchar author
+        varchar status
+        int views_count
+        jsonb seo_metadata
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    ARTICLES {
+        int id PK
+        varchar title
+        text content
+        date publication_date
+        text image_url
+        text thumbnail_image_url
+        varchar slug UK
+        varchar author
+        varchar status
+        int views_count
+        jsonb seo_metadata
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    EVENTS {
+        int id PK
+        varchar name
+        text description
+        varchar type
+        timestamp start_date
+        timestamp end_date
+        varchar location
+        text image_url
+        text thumbnail_image_url
+        varchar slug UK
+        varchar status
+        int views_count
+        jsonb seo_metadata
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    NODES {
+        int id PK
+        text name
+        text type
+        geometry geom "POINT 4326"
+    }
+
+    EDGES {
+        int id PK
+        int source FK "FK -> nodes"
+        int target FK "FK -> nodes"
+        float cost
+        float reverse_cost
+        geometry geom "LINESTRING 4326"
+    }
+
+    POINTS_OF_INTEREST {
+        int id PK
+        int node_id FK "FK -> nodes"
+        text description
+        jsonb opening_hours
+        jsonb contact_info
+        text image_url
+        numeric rating
+        jsonb metadata
+        boolean is_active
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    POI_CATEGORIES {
+        int id PK
+        text name UK
+        text description
+    }
+
+    POI_CATEGORY_MAPPING {
+        int poi_id PK "FK -> points_of_interest"
+        int category_id PK "FK -> poi_categories"
+    }
+
+    TEMPLE_NODES {
+        int id PK
+        text name
+        geometry geom "POINT 4326"
+        float altitude_m
+        int floor
+        varchar zone
+    }
+
+    TEMPLE_EDGES {
+        int id PK
+        int source FK "FK -> temple_nodes"
+        int target FK "FK -> temple_nodes"
+        float cost
+        float reverse_cost
+        geometry geom "LINESTRING 4326"
+        boolean is_stairs
+    }
+
+    TEMPLE_FEATURES {
+        int id PK
+        int node_id FK "FK -> temple_nodes"
+        text type
+        text name
+        text description
+        text image_url
+        numeric rating
+        jsonb metadata
+        int radius
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    TEMPLE_FLOOR_CONTOURS {
+        int id PK
+        int floor UK
+        float altitude_m
+        varchar name
+        geometry geom "POLYGON 4326"
+        timestamp created_at
+        timestamp updated_at
+    }

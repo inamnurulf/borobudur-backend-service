@@ -62,7 +62,7 @@ Borobudur Backend Service
 
 - **Implemented** — Authentication, content CRUD (news/articles/events/POI), temple spatial graph & features, navigation route, nearby POI, visitor data ke Hyperbase/MQTT.
 - **Experimental** — floor correction (`/v2/temples/floor-correction`).
-- **Planned** — unit & integration tests, caching (Redis), health check endpoint yang dedicated.
+- **Planned** — unit & integration tests, caching (Redis), health check endpoint yang dedicated (saat ini belum ada route `/health`).
 
 ---
 
@@ -147,6 +147,8 @@ Isi `.env` sesuai environment Anda. Variabel utama:
 | `DB_HOST` / `DB_PORT` / `DB_USER` / `DB_PASSWORD` / `DB_NAME` | Koneksi PostgreSQL per bagian |
 | `DB_SSL`                 | Set `true` jika koneksi butuh SSL       |
 | `PORT`                   | Port server (default `3001`)            |
+| `JWT_SECRET` / `JWT_REFRESH_SECRET` | Kunci signing access/refresh token |
+| `JWT_ACCESS_EXP` / `JWT_REFRESH_EXP_DAYS` | Durasi token (mis. `15m`, `30`) |
 | `SWAGGER_SERVER_URL`     | Base URL untuk Swagger                  |
 | `HYPERBASE_HOST`         | Base URL Hyperbase                      |
 | `HYPERBASE_EMAIL` / `HYPERBASE_PASSWORD` | Kredensial login Hyperbase |
@@ -154,8 +156,10 @@ Isi `.env` sesuai environment Anda. Variabel utama:
 | `HYPERBASE_BUCKET_ID`    | Bucket gambar Hyperbase                 |
 | `MQTT_BROKER_URL`        | URL broker MQTT                         |
 | `MQTT_TOPIC`             | Topic publish MQTT                      |
+| `GMAIL_USER` / `GMAIL_PASS` | Kredensial email verifikasi (Nodemailer) |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | OAuth2 Google login (redirect URI dikirim client via body) |
 
-> Catatan: variabel `HYPERBASE_HOST`, `HYPERBASE_EMAIL`, `HYPERBASE_PASSWORD`, dan `HYPERBASE_BUCKET_ID` digunakan oleh kode tetapi belum ada di `.env.example` — tambahkan secara manual.
+Daftar lengkap beserta status mandatory/optional/secret tersedia di [`docs/deployment.md`](docs/deployment.md).
 
 ### 3. Siapkan Database
 
@@ -189,10 +193,10 @@ Server berjalan di `http://localhost:3001` (atau sesuai `PORT`).
 
 ```bash
 docker build -t borobudur-backend .
-docker run --env-file .env -p 3001:3000 borobudur-backend
+docker run --env-file .env -p 3001:3001 borobudur-backend
 ```
 
-> Catatan: Dockerfile mengekspos port `3000`, sedangkan aplikasi default ke `3001`. Sesuaikan `PORT` di `.env` atau mapping port sesuai kebutuhan.
+> Pastikan `PORT=3001` di `.env` (aplikasi default ke `3001`). Dockerfile mengekspos port `3000`, sehingga set `PORT=3000` di `.env` juga valid asalkan mapping port disesuaikan.
 
 ### 6. Verifikasi
 
