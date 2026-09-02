@@ -156,7 +156,7 @@ Health Check (Swagger / endpoint publik)
 
 ## 10. Environment Variables
 
-Berikut variabel lengkap yang dibaca kode (lihat `.env.example`).
+Berikut variabel lengkap yang dibaca kode (lihat `.env.example`). Referensi kanonik beserta status mandatory/optional/secret tersedia di [`docs/environment-variables.md`](environment-variables.md).
 
 | Variable                     | Kategori     | Keterangan                                      |
 | ---------------------------- | ------------ | ----------------------------------------------- |

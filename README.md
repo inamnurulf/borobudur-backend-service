@@ -159,7 +159,7 @@ Isi `.env` sesuai environment Anda. Variabel utama:
 | `GMAIL_USER` / `GMAIL_PASS` | Kredensial email verifikasi (Nodemailer) |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | OAuth2 Google login (redirect URI dikirim client via body) |
 
-Daftar lengkap beserta status mandatory/optional/secret tersedia di [`docs/deployment.md`](docs/deployment.md).
+Daftar lengkap beserta status mandatory/optional/secret tersedia di [`docs/environment-variables.md`](docs/environment-variables.md).
 
 ### 3. Siapkan Database
 
@@ -213,3 +213,18 @@ API tersedia dalam dua versi yang di-mount sebagai berikut:
 - **v2** (`/v2`) — point-of-interest dan temples (model spasial/navigasi), meliputi `temples/features/nearby-grouped`, `temples/navigation/route-3d`, dan `temples/floor-correction`.
 
 Untuk daftar endpoint lengkap beserta request/response, lihat Swagger UI di `/api-docs`.
+
+---
+
+## Dokumentasi
+
+| Dokumen                                         | Isi                                                   |
+| ----------------------------------------------- | ----------------------------------------------------- |
+| [`docs/api-versioning.md`](docs/api-versioning.md) | Perbedaan API v1 vs v2, endpoint, dan deprecation     |
+| [`docs/database-schema.md`](docs/database-schema.md) | Skema database PostgreSQL + ERD                       |
+| [`docs/navigation.md`](docs/navigation.md)         | Algoritma navigasi multi-level Borobudur              |
+| [`docs/hyperbase.md`](docs/hyperbase.md)           | Aliran data pengunjung ke Hyperbase (ScyllaDB)        |
+| [`docs/deployment.md`](docs/deployment.md)         | Instalasi, migration, dan deployment                  |
+| [`docs/environment-variables.md`](docs/environment-variables.md) | Referensi environment variable                     |
+| [`migrations/README.md`](migrations/README.md)     | Panduan migration database                            |
+| [`docs/diagrams/erd.mmd`](docs/diagrams/erd.mmd)   | Diagram ERD (Mermaid)                                 |

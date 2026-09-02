@@ -17,7 +17,7 @@ const { validate } = require("../../validator/temples");
 
 /**
  * @swagger
- * /v1/temples/graph:
+ * /v2/temples/graph:
  *   get:
  *     summary: Get temple graph (nodes + edges) as GeoJSON
  *     tags: [Temples]
@@ -51,7 +51,7 @@ router.get("/graph", validate("getGraph"), async (req, res) => {
 
 /**
  * @swagger
- * /v1/temples/features:
+ * /v2/temples/features:
  *   get:
  *     summary: Get temple features as GeoJSON
  *     tags: [Temples]
@@ -72,7 +72,7 @@ router.get("/features", validate("getFeatures"), async (req, res) => {
 
 /**
  * @swagger
- * /v1/temples/features/nearest:
+ * /v2/temples/features/nearest:
  *   get:
  *     summary: Get nearest temple features (paginated)
  *     tags: [Temples]
@@ -132,10 +132,29 @@ router.get("/features/nearby-grouped", validate("getNearbyGrouped"), async (req,
 
 /**
  * @swagger
- * /v1/temples/navigation/route:
+ * /v2/temples/navigation/route-3d:
  *   get:
- *     summary: Compute navigation route between two points or features
+ *     summary: Compute 3D navigation route from a location to a node
  *     tags: [Temples]
+ *     parameters:
+ *       - in: query
+ *         name: fromLat
+ *         required: true
+ *         schema: { type: number }
+ *       - in: query
+ *         name: fromLon
+ *         required: true
+ *         schema: { type: number }
+ *       - in: query
+ *         name: toNodeId
+ *         required: true
+ *         schema: { type: integer }
+ *       - in: query
+ *         name: profile
+ *         schema: { type: string, default: walking }
+ *     responses:
+ *       200:
+ *         description: Route as 3D GeoJSON
  */
 router.get("/navigation/route-3d", validate("getRoute3d"), async (req, res) => {
   try {
@@ -151,6 +170,36 @@ router.get("/navigation/route-3d", validate("getRoute3d"), async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /v2/temples/navigation/route:
+ *   get:
+ *     summary: Compute floor-aware navigation route between two coordinates
+ *     tags: [Temples]
+ *     parameters:
+ *       - in: query
+ *         name: fromLat
+ *         required: true
+ *         schema: { type: number }
+ *       - in: query
+ *         name: fromLon
+ *         required: true
+ *         schema: { type: number }
+ *       - in: query
+ *         name: toLat
+ *         required: true
+ *         schema: { type: number }
+ *       - in: query
+ *         name: toLon
+ *         required: true
+ *         schema: { type: number }
+ *       - in: query
+ *         name: profile
+ *         schema: { type: string, default: walking }
+ *     responses:
+ *       200:
+ *         description: Route computed (floor-aware)
+ */
 router.get("/navigation/route", validate("getRoute"), async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -165,6 +214,33 @@ router.get("/navigation/route", validate("getRoute"), async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /v2/temples/floor-correction:
+ *   post:
+ *     summary: Correct the detected floor from a location and altitude
+ *     tags: [Temples]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - longitude
+ *               - latitude
+ *               - altitude
+ *             properties:
+ *               longitude:
+ *                 type: number
+ *               latitude:
+ *                 type: number
+ *               altitude:
+ *                 type: number
+ *     responses:
+ *       200:
+ *         description: Floor correction computed
+ */
 router.post("/floor-correction", validate("correctFloor"), async (req, res) => {
   try {
     const errors = validationResult(req);

@@ -10,7 +10,7 @@ const CustomError = require("../../helpers/customError");
 
 /**
  * @swagger
- * /v1/coordinate/:
+ * /v1/coordinate:
  *   post:
  *     summary: Send coordinates data
  *     description: This route accepts a client's coordinates and sends them to a controller.
@@ -20,16 +20,26 @@ const CustomError = require("../../helpers/customError");
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - client_id
+ *               - latitude
+ *               - longitude
  *             properties:
  *               client_id:
  *                 type: string
  *                 description: The unique identifier for the client.
  *               latitude:
- *                 type: string
+ *                 type: number
  *                 description: The latitude of the client's location.
  *               longitude:
- *                 type: string
+ *                 type: number
  *                 description: The longitude of the client's location.
+ *               floor:
+ *                 type: integer
+ *                 description: Detected floor (optional).
+ *               altitude_m:
+ *                 type: number
+ *                 description: Altitude in meters (optional).
  *     responses:
  *       200:
  *         description: Successful response

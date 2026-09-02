@@ -6,7 +6,39 @@ const { successResponse, failedResponse } = require("../../helpers/response");
 const logger = require("../../config/logger");
 const CustomError = require("../../helpers/customError");
 
+/**
+ * @swagger
+ * tags:
+ *   name: Provider
+ *   description: Third-party authentication providers
+ */
 
+/**
+ * @swagger
+ * /v1/provider/google:
+ *   post:
+ *     summary: Login or register via Google OAuth2
+ *     tags: [Provider]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - code
+ *               - redirect_uri
+ *             properties:
+ *               code:
+ *                 type: string
+ *                 description: Google authorization code
+ *               redirect_uri:
+ *                 type: string
+ *                 description: Redirect URI used by the client (sent via body)
+ *     responses:
+ *       200:
+ *         description: Google login successful (user data + tokens)
+ */
 router.post("/google", async (req, res) => {
   try {
     const errors = validationResult(req); 

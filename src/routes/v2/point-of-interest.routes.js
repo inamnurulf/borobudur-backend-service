@@ -7,6 +7,38 @@ const { successResponse, failedResponse } = require("../../helpers/response");
 const logger = require("../../config/logger");
 const CustomError = require("../../helpers/customError");
 
+/**
+ * @swagger
+ * tags:
+ *   name: PointOfInterestV2
+ *   description: Points of Interest (v2)
+ */
+
+/**
+ * @swagger
+ * /v2/point-of-interest/nearby:
+ *   get:
+ *     summary: Get nearby POIs given a location (simplified response)
+ *     tags: [PointOfInterestV2]
+ *     parameters:
+ *       - in: query
+ *         name: latitude
+ *         required: true
+ *         schema: { type: number }
+ *       - in: query
+ *         name: longitude
+ *         required: true
+ *         schema: { type: number }
+ *       - in: query
+ *         name: radius
+ *         schema: { type: integer, default: 1000 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, default: 10 }
+ *     responses:
+ *       200:
+ *         description: List of nearby POIs (facilities)
+ */
 router.get("/nearby", validate("getNearbyPOIs"), async (req, res) => {
   try {
     const errors = validationResult(req);

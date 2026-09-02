@@ -268,4 +268,4 @@ Aplikasi mobile Borobudur **menggunakan kedua versi API**:
 ## Catatan / Gap
 
 - Kolom `type` pada `temple_edges` dirujuk oleh kode (`e.type` dan filter query `type` di `getGraph`), tetapi **tidak ada** di skema database (lihat `docs/database-schema.md`). Filter `type` pada endpoint temple graph dapat menyebabkan error SQL jika dipakai.
-- Dokumentasi Swagger (`/api-docs`) masih menyebut beberapa path sebagai `/v1/temples/...` pada route v2 (copy-paste dari v1); path aktual mengikuti versi mount-nya.
+- Pada `src/routes/v1/temples.routes.js`, endpoint `/navigation/route` memakai validator `getRoute3d` namun memanggil `templesController.getRoute` (mismatch validator vs handler) — perlu dicek ulang apakah ini disengaja.

@@ -5,16 +5,25 @@ const swaggerOptions = {
   definition: {
     openapi: "3.0.0",
     info: {
-      title: "PMS API",
+      title: "Borobudur Backend Service API",
       version: "1.0.0",
-      description: "API documentation for the PMS service",
+      description: "REST API documentation for the Borobudur Smart Tourism backend (v1 and v2)",
     },
     servers: [
       {
-        url: process.env.SWAGGER_SERVER_URL || "http://localhost:3000",
+        url: process.env.SWAGGER_SERVER_URL || "http://localhost:3001",
         description: "Dynamic server",
       },
-    ],    
+    ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+        },
+      },
+    },
   },
   apis: ["./src/routes/**/*.js"]
 };

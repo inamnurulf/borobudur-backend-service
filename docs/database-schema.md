@@ -368,6 +368,8 @@ Field berikut tidak termasuk schema, tetapi otomatis dibuat/dikelola Hyperbase u
 - `client_id` disimpan sebagai **plain string** (tidak di-hash) — tidak cocok menyimpan identifier yang bersifat sensitif.
 - Tidak ada field timestamp/device metadata di schema; waktu record hanya dari system field `_created_at`/`_updated_at`.
 
+> Dokumentasi lengkap aliran data pengunjung (autentikasi, retensi, privacy, checklist data) tersedia di [`docs/hyperbase.md`](hyperbase.md).
+
 ---
 
 ## Catatan / Gap

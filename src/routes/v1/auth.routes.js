@@ -256,7 +256,7 @@ router.post(
 
 /**
  * @swagger
- * /v1/auth/verify-code:
+ * /v1/auth/verify-email:
  *   post:
  *     summary: Verify the email code
  *     tags: [Auth]

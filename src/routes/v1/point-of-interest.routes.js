@@ -36,6 +36,46 @@ router.get("/", async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /v1/point-of-interest:
+ *   post:
+ *     summary: Create a new POI
+ *     tags: [PointOfInterest]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - node_id
+ *             properties:
+ *               node_id:
+ *                 type: integer
+ *                 description: ID of the linked node
+ *               description:
+ *                 type: string
+ *               opening_hours:
+ *                 type: object
+ *               contact_info:
+ *                 type: object
+ *               image_url:
+ *                 type: string
+ *               rating:
+ *                 type: number
+ *               metadata:
+ *                 type: object
+ *               is_active:
+ *                 type: boolean
+ *               category_ids:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *     responses:
+ *       201:
+ *         description: POI created successfully
+ */
 router.post("/", validate("createPOI"), async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -148,6 +188,22 @@ router.get(
   }
 );
 
+/**
+ * @swagger
+ * /v1/point-of-interest/{id}:
+ *   get:
+ *     summary: Get POI by ID
+ *     tags: [PointOfInterest]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: POI detail
+ */
 router.get("/:id", validate("getPOIById"), async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -168,6 +224,49 @@ router.get("/:id", validate("getPOIById"), async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /v1/point-of-interest/{id}:
+ *   put:
+ *     summary: Update a POI
+ *     tags: [PointOfInterest]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               node_id:
+ *                 type: integer
+ *               description:
+ *                 type: string
+ *               opening_hours:
+ *                 type: object
+ *               contact_info:
+ *                 type: object
+ *               image_url:
+ *                 type: string
+ *               rating:
+ *                 type: number
+ *               metadata:
+ *                 type: object
+ *               is_active:
+ *                 type: boolean
+ *               category_ids:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *     responses:
+ *       200:
+ *         description: POI updated
+ */
 router.put("/:id", validate("updatePOI"), async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -190,6 +289,22 @@ router.put("/:id", validate("updatePOI"), async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /v1/point-of-interest/{id}:
+ *   delete:
+ *     summary: Delete a POI
+ *     tags: [PointOfInterest]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: POI deleted
+ */
 router.delete("/:id", validate("deletePOI"), async (req, res) => {
   try {
     const errors = validationResult(req);
